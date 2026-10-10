@@ -9,3 +9,6 @@ coverage/
 !.env.example
 apps/api/scripts/tryon-spike/inputs/
 apps/api/scripts/tryon-spike/outputs/
+
+# Local planning docs, never committed
+packages/docs/
