@@ -13,9 +13,15 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { ZodValidationPipe } from '../src/common/zod-validation.pipe';
+import { Public } from '../src/auth/auth.decorators';
+import { RuntimeConfig } from '../src/config/runtime-config';
+import { PrismaService } from '../src/database/prisma.service';
+import { RedisService } from '../src/queue/redis.service';
+import { IdentityProvider } from '../src/auth/identity.provider';
 
 // Test-only routes exercise production validation and error handling over HTTP.
 @Controller('probe')
+@Public()
 class ProbeController {
   @Post()
   validate(@Body(new ZodValidationPipe(HealthResponse)) body: HealthResponse) {
@@ -44,7 +50,16 @@ describe('API foundation (HTTP)', () => {
     const fixture = await Test.createTestingModule({
       imports: [AppModule],
       controllers: [ProbeController],
-    }).compile();
+    })
+      .overrideProvider(RuntimeConfig)
+      .useValue({ values: {} })
+      .overrideProvider(PrismaService)
+      .useValue({})
+      .overrideProvider(RedisService)
+      .useValue({ client: {} })
+      .overrideProvider(IdentityProvider)
+      .useValue({})
+      .compile();
     app = fixture.createNestApplication();
     await app.init();
   });

@@ -1,0 +1,21 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "outputs": ["dist/**", "src/generated/**"],
+      "inputs": ["$TURBO_DEFAULT$", "!src/generated/**"]
+    },
+    "lint": { "dependsOn": ["build"] },
+    "dev": {
+      "passThroughEnv": [
+        "PORT",
+        "CORS_ORIGINS",
+        "DATABASE_URL",
+        "REDIS_URL",
+        "CLERK_SECRET_KEY",
+        "CLERK_WEBHOOK_SECRET",
+        "CLERK_AUTHORIZED_PARTIES"
+      ]
+    }
+  }
+}

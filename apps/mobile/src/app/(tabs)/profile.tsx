@@ -1,23 +1,45 @@
+import { useAuth, useUser } from '@clerk/expo';
+import { Image } from 'expo-image';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Card, ErrorState, Icon, LoadingState, Screen, Text } from '@/components/ui';
+import { Button, Card, ErrorState, Icon, LoadingState, Screen, Text } from '@/components/ui';
 import { useHealth } from '@/features/health/hooks';
+import { useMe } from '@/features/me/hooks';
 import { colors, radius, space } from '@/theme';
 
 export default function ProfileScreen() {
   const health = useHealth();
+  const me = useMe();
+  const { user } = useUser();
+  const { signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
+
+  // Account data comes from our API (/me); Clerk only supplies display name and avatar.
+  const email = me.data ? (me.data.email ?? 'Tài khoản chưa có email') : me.isPending ? 'Đang tải…' : '';
+  const name = user?.fullName || me.data?.email?.split('@')[0] || 'Bạn';
 
   return (
     <Screen title="Hồ sơ">
       <View style={styles.identity}>
         <View style={styles.avatar}>
-          <Icon ios="person.fill" android="person" size={30} color={colors.inkSecondary} />
+          {user?.hasImage ? (
+            <Image source={{ uri: user.imageUrl }} style={styles.avatarImage} accessibilityIgnoresInvertColors />
+          ) : (
+            <Icon ios="person.fill" android="person" size={30} color={colors.inkSecondary} />
+          )}
         </View>
         <View style={{ gap: 2, flex: 1 }}>
-          <Text variant="title">Chưa đăng nhập</Text>
-          <Text variant="callout" color={colors.inkSecondary}>Đăng nhập sẽ có ở bước tiếp theo</Text>
+          <Text variant="title" numberOfLines={1}>{name}</Text>
+          <Text variant="callout" color={colors.inkSecondary} numberOfLines={1}>{email}</Text>
         </View>
       </View>
+
+      {me.isError ? (
+        <Card>
+          <ErrorState error={me.error} onRetry={() => me.refetch()} />
+        </Card>
+      ) : null}
 
       <Text variant="footnote" color={colors.inkSecondary} style={styles.sectionLabel}>KẾT NỐI MÁY CHỦ</Text>
       <Card>
@@ -35,13 +57,28 @@ export default function ProfileScreen() {
         )}
         <Text variant="caption" color={colors.inkSecondary}>{process.env.EXPO_PUBLIC_API_URL ?? 'Chưa cấu hình EXPO_PUBLIC_API_URL'}</Text>
       </Card>
+
+      <Button
+        label="Đăng xuất"
+        variant="danger"
+        loading={signingOut}
+        onPress={async () => {
+          setSigningOut(true);
+          try {
+            await signOut();
+          } finally {
+            setSigningOut(false);
+          }
+        }}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   identity: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#DCD6CC', alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 64, height: 64, borderRadius: 32, overflow: 'hidden', backgroundColor: '#DCD6CC', alignItems: 'center', justifyContent: 'center' },
+  avatarImage: { width: 64, height: 64 },
   sectionLabel: { marginLeft: space.lg, marginBottom: -space.sm, letterSpacing: 0.3 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 44 },
   okDot: { width: 26, height: 26, borderRadius: radius.pill, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center' },

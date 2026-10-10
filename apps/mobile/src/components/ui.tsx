@@ -73,10 +73,10 @@ export function Screen({ title, subtitle, right, children, background = colors.g
   );
 }
 
-type ButtonProps = { label: string; onPress?: () => void; variant?: 'primary' | 'glass' | 'plain' | 'danger'; disabled?: boolean; loading?: boolean; icon?: ReactNode; style?: StyleProp<ViewStyle> };
+type ButtonProps = { label: string; onPress?: () => void; variant?: 'primary' | 'ink' | 'glass' | 'plain' | 'danger'; disabled?: boolean; loading?: boolean; icon?: ReactNode; style?: StyleProp<ViewStyle> };
 
 export function Button({ label, onPress, variant = 'primary', disabled, loading, icon, style }: ButtonProps) {
-  const fg = variant === 'primary' ? '#FFFFFF' : variant === 'danger' ? colors.danger : colors.ink;
+  const fg = variant === 'primary' || variant === 'ink' ? '#FFFFFF' : variant === 'danger' ? colors.danger : colors.ink;
   const content = (
     <>
       {loading ? <ActivityIndicator color={fg} /> : icon}
@@ -95,7 +95,7 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
       {variant === 'glass' ? (
         <Glass interactive style={styles.button}>{content}</Glass>
       ) : (
-        <View style={[styles.button, variant === 'primary' && { backgroundColor: colors.accent }, variant === 'danger' && { backgroundColor: colors.dangerSoft }, variant === 'plain' && { backgroundColor: colors.fill }]}>{content}</View>
+        <View style={[styles.button, variant === 'primary' && { backgroundColor: colors.accent }, variant === 'ink' && { backgroundColor: colors.ink },variant === 'danger' && { backgroundColor: colors.dangerSoft }, variant === 'plain' && { backgroundColor: colors.fill }]}>{content}</View>
       )}
     </Pressable>
   );

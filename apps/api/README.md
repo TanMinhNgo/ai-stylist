@@ -56,6 +56,10 @@ create(@Body(new ZodValidationPipe(CreateRequest)) body: CreateRequest) {
 - `CORS_ORIGINS`: browser origins cách nhau bằng dấu phẩy; bỏ trống thì không bật CORS. Native Expo không cần CORS.
 - API đọc `.env` trong thư mục làm việc `apps/api` khi chạy qua workspace script. Không commit `.env`.
 
+File `.env.example` có đủ biến theo kiến trúc hiện tại: HTTP, Neon/Prisma, Redis, Clerk, ImageKit và OpenAI. BE-01 sử dụng DATABASE_URL, REDIS_URL, CLERK_SECRET_KEY, CLERK_WEBHOOK_SECRET và CLERK_AUTHORIZED_PARTIES. ImageKit/OpenAI chưa tích hợp. Secret webhook chưa cấu hình thì route webhook trả 503, không xử lý dữ liệu.
+
+`DATABASE_URL` là URL pooled dùng cho truy vấn API/worker. `DIRECT_URL` là URL trực tiếp tới cùng database, dự kiến dùng cho Prisma CLI/migration. Trong Neon Console > Connect, giữ nguyên branch/database/role rồi lấy một URL có bật connection pooling và một URL tắt pooling. Host pooled có `-pooler`; host direct không có hậu tố đó. Giữ các tham số SSL mà Neon cung cấp. Hai biến là hai đường kết nối, không phải hai database khác nhau. Cấu hình Prisma cụ thể sẽ được nối vào hai biến khi làm BE-01 theo phiên bản cài đặt; biến env chưa tự có tác dụng khi chưa được code sử dụng. Xem [Prisma database connections](https://www.prisma.io/docs/orm/v7/prisma-client/setup-and-configuration/databases-connections).
+
 ## Kiểm tra và build
 
 ```powershell
@@ -73,5 +77,17 @@ Bộ lọc lỗi đăng ký qua `APP_FILTER`, nên test khởi tạo AppModule c
 
 ## Phần tiếp theo
 
-Giai đoạn 0 toàn dự án còn tích hợp fetch/shared trên mobile, Redis Compose và kiểm tra nhật ký contract bằng Git. `scripts/wait-for-api.mjs` được launcher sử dụng và có thể chạy độc lập với URL API làm tham số. Giai đoạn 1 mới thêm Neon/Prisma, Clerk và Redis/BullMQ. Health hiện chỉ xác nhận HTTP server sống, chưa bảo đảm DB/queue khỏe.
+BE-01 đã thêm Neon/Prisma, Clerk và nền Redis/BullMQ. API kiểm tra kết nối DB (bao gồm bảng users) và Redis trước khi mở cổng; launcher vì vậy không mở mobile khi dependency chưa sẵn sàng. `/health` vẫn là liveness sau khởi động, chưa theo dõi dependency liên tục. Không chạy build và dev đồng thời vì Nest build dọn dist.
+
+## Thiết lập BE-01
+
+1. Điền `.env` theo file mẫu. `CLERK_AUTHORIZED_PARTIES` mặc định rỗng cho app Expo native, độc lập với `CORS_ORIGINS`. Token native không có azp vẫn phải qua kiểm tra chữ ký, thời hạn và session. Khi API chỉ phục vụ web, đặt danh sách frontend origins rõ ràng; Clerk SDK sẽ yêu cầu azp khớp danh sách và từ chối cả token không có azp. Không điền browser origins vào cấu hình native hoặc dùng API origin thay cho frontend origin.
+2. Nếu dùng Redis local: mở Docker Desktop, từ gốc repo chạy `docker compose up -d redis`, rồi đặt REDIS_URL=redis://localhost:6379 trong `.env`. Redis chỉ bind loopback máy, điện thoại gọi API chứ không kết nối Redis. Nếu dùng cloud, giữ URL provider thực sự phân giải/truy cập được; rediss dùng TLS.
+3. Chạy `npm run db:validate --workspace api` và `npm run db:migrate --workspace api`. Migrate deploy dùng DIRECT_URL, không tạo shadow database hoặc reset dữ liệu. Chỉ chạy trên database/branch bạn định dùng.
+4. `npm run build --workspace api` generate Prisma client rồi build Nest. Client generated không commit, Turbo cache bao gồm cả client và dist. Sau build có thể chạy `node scripts/check-user-sync.cjs` từ apps/api để kiểm tra thật trên DB; mọi fixture nằm trong transaction rollback.
+5. Chạy `npm run dev` hoặc `npm run dev:api`. Auth mặc định cho route nghiệp vụ; GET /health public; GET /me nhận Authorization: Bearer <Clerk session token>. Response theo MeResponse, email có thể null.
+
+Webhook: tạo endpoint HTTPS trỏ tới `/webhooks/clerk` trong Clerk Dashboard, đăng ký user.created/updated/deleted, đặt signing secret vào CLERK_WEBHOOK_SECRET. LAN URL không nhận được webhook từ Clerk trên internet; local cần public HTTPS forwarding do bạn cấu hình. Nest giữ raw body để verify Svix signature; sự kiện không hợp lệ bị từ chối trước DB. Event lặp và cũ không ghi đè dữ liệu mới; user.deleted scrub email và giữ tombstone tối thiểu chống phục hồi. Toàn bộ purge dữ liệu/ảnh làm ở BE-05.
+
+Log dùng ConsoleLogger JSON, mỗi request có x-request-id; không ghi Authorization, token, email, URL đầy đủ hoặc body. Test thường mock DB/Redis/Clerk; có test chữ ký dùng SDK thật và secret sinh trong test, không gọi mạng.
 
