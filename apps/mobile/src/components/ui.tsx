@@ -1,0 +1,147 @@
+import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
+import type { ReactNode } from 'react';
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text as RNText,
+  View,
+  type StyleProp,
+  type TextProps,
+  type ViewStyle,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-screens/experimental';
+
+import { FLOATING_TAB_BAR_SPACE } from '@/components/tabs';
+import { messageFor } from '@/lib/errors';
+import { colors, radius, space, type, type TypeVariant } from '@/theme';
+
+const canGlass = Platform.OS === 'ios' && isGlassEffectAPIAvailable();
+
+export function Text({ variant = 'body', color = colors.ink, style, ...props }: TextProps & { variant?: TypeVariant; color?: string }) {
+  return <RNText {...props} style={[type[variant], { color }, style]} />;
+}
+
+export function Icon({ ios, android, size = 22, color = colors.ink }: { ios: string; android: string; size?: number; color?: string }) {
+  return <SymbolView name={{ ios, android, web: android } as SymbolViewProps['name']} size={size} tintColor={color} />;
+}
+
+/** Liquid Glass on iOS 26+, a frosted white panel elsewhere. */
+export function Glass({ style, children, interactive }: { style?: StyleProp<ViewStyle>; children?: ReactNode; interactive?: boolean }) {
+  if (canGlass) return <GlassView isInteractive={interactive} style={[styles.glassBase, style]}>{children}</GlassView>;
+  return <View style={[styles.glassBase, styles.glassFallback, style]}>{children}</View>;
+}
+
+/** Scrolling page with an iOS-style large title; leaves room for the floating tab bar. */
+export function Screen({ title, subtitle, right, children, background = colors.ground }: { title: string; subtitle?: string; right?: ReactNode; children?: ReactNode; background?: string }) {
+  const insets = useSafeAreaInsets();
+  const ios = Platform.OS === 'ios';
+  const scroll = (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: background }}
+      contentInsetAdjustmentBehavior="never"
+      contentContainerStyle={{
+        // iOS: the native SafeAreaView below already excludes status bar and tab bar.
+        // Android: we add the top inset; the floating tab bar overlays the content.
+        paddingTop: ios ? space.sm : insets.top + space.md,
+        paddingBottom: ios ? space.xl : insets.bottom + FLOATING_TAB_BAR_SPACE,
+        paddingHorizontal: space.xl,
+        gap: space.lg,
+        flexGrow: 1,
+      }}>
+      <View style={styles.header}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text variant="largeTitle" accessibilityRole="header">{title}</Text>
+          {subtitle ? <Text variant="callout" color={colors.inkSecondary}>{subtitle}</Text> : null}
+        </View>
+        {right}
+      </View>
+      {children}
+    </ScrollView>
+  );
+  if (!ios) return scroll;
+  // Tabs set disableAutomaticContentInsets, so this measures the real tab bar height and the
+  // flexGrow content (empty/error states) centres in the visible area.
+  return (
+    <SafeAreaView edges={{ top: true, bottom: true }} collapsable={false} style={{ flex: 1, backgroundColor: background }}>
+      {scroll}
+    </SafeAreaView>
+  );
+}
+
+type ButtonProps = { label: string; onPress?: () => void; variant?: 'primary' | 'glass' | 'plain' | 'danger'; disabled?: boolean; loading?: boolean; icon?: ReactNode; style?: StyleProp<ViewStyle> };
+
+export function Button({ label, onPress, variant = 'primary', disabled, loading, icon, style }: ButtonProps) {
+  const fg = variant === 'primary' ? '#FFFFFF' : variant === 'danger' ? colors.danger : colors.ink;
+  const content = (
+    <>
+      {loading ? <ActivityIndicator color={fg} /> : icon}
+      <Text variant="headline" color={fg}>{label}</Text>
+    </>
+  );
+  const inactive = disabled || loading;
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={inactive}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!inactive, busy: !!loading }}
+      style={({ pressed }) => [{ opacity: inactive ? 0.4 : pressed ? 0.75 : 1 }, style]}>
+      {variant === 'glass' ? (
+        <Glass interactive style={styles.button}>{content}</Glass>
+      ) : (
+        <View style={[styles.button, variant === 'primary' && { backgroundColor: colors.accent }, variant === 'danger' && { backgroundColor: colors.dangerSoft }, variant === 'plain' && { backgroundColor: colors.fill }]}>{content}</View>
+      )}
+    </Pressable>
+  );
+}
+
+export function Card({ children, style }: { children?: ReactNode; style?: StyleProp<ViewStyle> }) {
+  return <View style={[styles.card, style]}>{children}</View>;
+}
+
+export function LoadingState({ label = 'Đang tải…' }: { label?: string }) {
+  return (
+    <View style={styles.state} accessibilityLiveRegion="polite">
+      <ActivityIndicator color={colors.inkSecondary} />
+      <Text variant="callout" color={colors.inkSecondary}>{label}</Text>
+    </View>
+  );
+}
+
+export function EmptyState({ icon, title, message, action }: { icon?: ReactNode; title: string; message?: string; action?: ReactNode }) {
+  return (
+    <View style={styles.state}>
+      {icon}
+      <Text variant="headline" style={styles.center}>{title}</Text>
+      {message ? <Text variant="callout" color={colors.inkSecondary} style={styles.center}>{message}</Text> : null}
+      {action}
+    </View>
+  );
+}
+
+export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  return (
+    <EmptyState
+      icon={<Icon ios="exclamationmark.triangle" android="warning" size={30} color={colors.warning} />}
+      title="Có lỗi xảy ra"
+      message={messageFor(error)}
+      action={onRetry ? <Button label="Thử lại" variant="plain" onPress={onRetry} /> : null}
+    />
+  );
+}
+
+const styles = StyleSheet.create({
+  header: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
+  glassBase: { overflow: 'hidden' },
+  glassFallback: { backgroundColor: colors.glassFallback, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.9)' },
+  button: { minHeight: 50, paddingHorizontal: space.xl, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
+  card: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: space.lg, gap: space.md },
+  state: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, paddingVertical: 48, paddingHorizontal: space.xl },
+  center: { textAlign: 'center' },
+});
