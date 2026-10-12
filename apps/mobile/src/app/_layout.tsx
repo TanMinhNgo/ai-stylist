@@ -48,6 +48,9 @@ function RootStack() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}>
       <Stack.Protected guard={!!isSignedIn}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="photo-guide" />
+        <Stack.Screen name="model-photos" />
+        <Stack.Screen name="garment/[id]" />
       </Stack.Protected>
       <Stack.Protected guard={!isSignedIn}>
         <Stack.Screen name="(auth)" />

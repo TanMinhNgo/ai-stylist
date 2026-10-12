@@ -38,37 +38,50 @@ export function Glass({ style, children, interactive }: { style?: StyleProp<View
 
 /** Scrolling page with an iOS-style large title; leaves room for the floating tab bar. */
 export function Screen({ title, subtitle, right, children, background = colors.ground }: { title: string; subtitle?: string; right?: ReactNode; children?: ReactNode; background?: string }) {
+  const padding = useTabScreenPadding();
+  return (
+    <TabScreenFrame background={background}>
+      <ScrollView style={{ flex: 1, backgroundColor: background }} contentInsetAdjustmentBehavior="never" contentContainerStyle={[padding, { gap: space.lg }]}>
+        <ScreenHeader title={title} subtitle={subtitle} right={right} />
+        {children}
+      </ScrollView>
+    </TabScreenFrame>
+  );
+}
+
+export function ScreenHeader({ title, subtitle, right }: { title: string; subtitle?: string; right?: ReactNode }) {
+  return (
+    <View style={styles.header}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text variant="largeTitle" accessibilityRole="header">{title}</Text>
+        {subtitle ? <Text variant="callout" color={colors.inkSecondary}>{subtitle}</Text> : null}
+      </View>
+      {right}
+    </View>
+  );
+}
+
+/** Content padding for a tab screen's scroll container (ScrollView or FlatList). */
+export function useTabScreenPadding(): ViewStyle {
   const insets = useSafeAreaInsets();
   const ios = Platform.OS === 'ios';
-  const scroll = (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: background }}
-      contentInsetAdjustmentBehavior="never"
-      contentContainerStyle={{
-        // iOS: the native SafeAreaView below already excludes status bar and tab bar.
-        // Android: we add the top inset; the floating tab bar overlays the content.
-        paddingTop: ios ? space.sm : insets.top + space.md,
-        paddingBottom: ios ? space.xl : insets.bottom + FLOATING_TAB_BAR_SPACE,
-        paddingHorizontal: space.xl,
-        gap: space.lg,
-        flexGrow: 1,
-      }}>
-      <View style={styles.header}>
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text variant="largeTitle" accessibilityRole="header">{title}</Text>
-          {subtitle ? <Text variant="callout" color={colors.inkSecondary}>{subtitle}</Text> : null}
-        </View>
-        {right}
-      </View>
-      {children}
-    </ScrollView>
-  );
-  if (!ios) return scroll;
-  // Tabs set disableAutomaticContentInsets, so this measures the real tab bar height and the
-  // flexGrow content (empty/error states) centres in the visible area.
+  return {
+    // iOS: TabScreenFrame's native SafeAreaView already excludes status bar and tab bar.
+    // Android: we add the top inset; the floating tab bar overlays the content.
+    paddingTop: ios ? space.sm : insets.top + space.md,
+    paddingBottom: ios ? space.xl : insets.bottom + FLOATING_TAB_BAR_SPACE,
+    paddingHorizontal: space.xl,
+    flexGrow: 1,
+  };
+}
+
+/** Tabs set disableAutomaticContentInsets, so on iOS this measures the real tab bar height and
+ * flexGrow content (empty/error states) centres in the visible area. */
+export function TabScreenFrame({ background, children }: { background: string; children: ReactNode }) {
+  if (Platform.OS !== 'ios') return <>{children}</>;
   return (
     <SafeAreaView edges={{ top: true, bottom: true }} collapsable={false} style={{ flex: 1, backgroundColor: background }}>
-      {scroll}
+      {children}
     </SafeAreaView>
   );
 }
