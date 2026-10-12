@@ -23,7 +23,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit() {
-    await this.client.connect();
+    // BullMQ may start the shared connection before Nest invokes this hook.
+    if (this.client.status === 'wait') await this.client.connect();
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([

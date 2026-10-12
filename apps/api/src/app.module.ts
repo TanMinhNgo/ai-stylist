@@ -7,9 +7,10 @@ import { RuntimeConfigModule } from './config/runtime-config';
 import { AuthModule } from './auth/auth.module';
 import { QueueModule } from './queue/queue.module';
 import { RequestLogMiddleware } from './common/request-log.middleware';
+import { MediaModule } from './media/media.module';
 
 @Module({
-  imports: [RuntimeConfigModule, AuthModule, QueueModule],
+  imports: [RuntimeConfigModule, AuthModule, QueueModule, MediaModule],
   controllers: [AppController],
   providers: [
     AppService,

@@ -15,6 +15,54 @@ model User {
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   clerkUpdatedAt BigInt    @default(0) @map("clerk_updated_at")
   deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
+  uploadGrants   UploadGrant[]
+  modelPhotos    ModelPhoto[]
+  garments       Garment[]
 
   @@map("users")
+}
+
+model UploadGrant {
+  token           String   @id @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  folder          String   @unique
+  expiresAt       DateTime @map("expires_at") @db.Timestamptz(3)
+  usedAt          DateTime? @map("used_at") @db.Timestamptz(3)
+  imagekitFileId  String?  @unique @map("imagekit_file_id")
+  user            User    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  @@index([userId])
+  @@map("upload_grants")
+}
+
+model ModelPhoto {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  imagekitFileId String   @unique @map("imagekit_file_id")
+  filePath       String   @map("file_path")
+  status         String   @default("pending")
+  errorCode      String?  @map("error_code")
+  analysis       Json?
+  promptVersion  String?  @map("prompt_version")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user           User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  @@index([userId, createdAt, id])
+  @@map("model_photos")
+}
+
+model Garment {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  imagekitFileId String   @unique @map("imagekit_file_id")
+  filePath       String   @map("file_path")
+  status         String   @default("pending")
+  errorCode      String?  @map("error_code")
+  category       String?
+  tags           Json?
+  embedding      Unsupported("vector(1024)")?
+  promptVersion  String?  @map("prompt_version")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user           User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  @@index([userId, createdAt, id])
+  @@index([userId, category])
+  @@map("garments")
 }

@@ -1,6 +1,6 @@
 # API AI Stylist
 
-Backend NestJS của giai đoạn 0. Node 24 và npm 11; chạy lệnh cài đặt từ gốc repo để link `@stylist/shared`.
+Backend NestJS cho BE-01/BE-02. Node 24 và npm 11; chạy lệnh cài đặt từ gốc repo để link `@stylist/shared`.
 
 ## Chạy local
 
@@ -56,15 +56,15 @@ create(@Body(new ZodValidationPipe(CreateRequest)) body: CreateRequest) {
 - `CORS_ORIGINS`: browser origins cách nhau bằng dấu phẩy; bỏ trống thì không bật CORS. Native Expo không cần CORS.
 - API đọc `.env` trong thư mục làm việc `apps/api` khi chạy qua workspace script. Không commit `.env`.
 
-File `.env.example` có đủ biến theo kiến trúc hiện tại: HTTP, Neon/Prisma, Redis, Clerk, ImageKit và OpenAI. BE-01 sử dụng DATABASE_URL, REDIS_URL, CLERK_SECRET_KEY, CLERK_WEBHOOK_SECRET và CLERK_AUTHORIZED_PARTIES. ImageKit/OpenAI chưa tích hợp. Secret webhook chưa cấu hình thì route webhook trả 503, không xử lý dữ liệu.
+File `.env.example` có đủ biến HTTP, Neon/Prisma, Redis, Clerk, ImageKit và OpenAI. BE-02 sử dụng ba biến IMAGEKIT và OPENAI_API_KEY/VISION_MODEL/EMBEDDING_MODEL. Thiếu cấu hình provider thì upload trả 503 hoặc job phân tích chuyển failed; OPENAI_IMAGE_MODEL dành cho try-on sau này. Secret webhook chưa cấu hình thì route webhook trả 503.
 
-`DATABASE_URL` là URL pooled dùng cho truy vấn API/worker. `DIRECT_URL` là URL trực tiếp tới cùng database, dự kiến dùng cho Prisma CLI/migration. Trong Neon Console > Connect, giữ nguyên branch/database/role rồi lấy một URL có bật connection pooling và một URL tắt pooling. Host pooled có `-pooler`; host direct không có hậu tố đó. Giữ các tham số SSL mà Neon cung cấp. Hai biến là hai đường kết nối, không phải hai database khác nhau. Cấu hình Prisma cụ thể sẽ được nối vào hai biến khi làm BE-01 theo phiên bản cài đặt; biến env chưa tự có tác dụng khi chưa được code sử dụng. Xem [Prisma database connections](https://www.prisma.io/docs/orm/v7/prisma-client/setup-and-configuration/databases-connections).
+`DATABASE_URL` là URL pooled dùng cho truy vấn API/worker. `DIRECT_URL` là URL trực tiếp tới cùng database, dùng cho Prisma CLI/migration. Trong Neon Console > Connect, giữ nguyên branch/database/role rồi lấy một URL có bật connection pooling và một URL tắt pooling. Host pooled có `-pooler`; host direct không có hậu tố đó. Giữ các tham số SSL mà Neon cung cấp. Hai biến là hai đường kết nối, không phải hai database khác nhau. Prisma runtime đọc DATABASE_URL; prisma.config.ts đọc DIRECT_URL cho migration. Xem [Prisma database connections](https://www.prisma.io/docs/orm/v7/prisma-client/setup-and-configuration/databases-connections).
 
 ## Kiểm tra và build
 
 ```powershell
 # Từ gốc repo; hiện chỉ kiểm tra API và shared
-npx turbo build test lint
+npx turbo build test lint --filter=api --filter=@stylist/shared
 node --test scripts/*.test.mjs
 
 # Chạy bản đã build
@@ -91,3 +91,25 @@ Webhook: tạo endpoint HTTPS trỏ tới `/webhooks/clerk` trong Clerk Dashboar
 
 Log dùng ConsoleLogger JSON, mỗi request có x-request-id; không ghi Authorization, token, email, URL đầy đủ hoặc body. Test thường mock DB/Redis/Clerk; có test chữ ký dùng SDK thật và secret sinh trong test, không gọi mạng.
 
+
+## BE-02: upload và phân tích
+
+1. Gọi `GET /uploads/auth` với Bearer token Clerk. Parse `UploadAuthResponse` từ shared. Grant có hiệu lực 10 phút, đăng ký một ảnh một lần.
+2. Upload trực tiếp ImageKit V1 với token/expire/signature/publicKey, **folder đúng như response và isPrivateFile=true**. Không upload công khai; backend sẽ từ chối đăng ký. File phải là ảnh, tối đa 10 MiB.
+3. Gọi `POST /model-photos` hoặc `POST /garments` với `{ imagekitFileId, url, uploadToken: auth.token }`. Không gửi userId. API xác minh metadata ImageKit và folder của grant trước khi lưu; HTTP 201 trả resource pending.
+4. Poll `GET /model-photos/:id` hoặc `GET /garments/:id` đến ready/failed. Worker analysis chạy cùng tiến trình API, concurrency 2, tối đa 2 lần thử. Đầu ra AI sai schema kết thúc failed. Ảnh người mẫu có errorCode riêng cho nhiều người, không toàn thân, không phù hợp hoặc không đủ chất lượng.
+5. Danh sách trả `{ items, nextCursor }`, `limit` mặc định 20, tối đa 50; garments nhận thêm category. DELETE theo id xóa file rồi bản ghi. Nếu ImageKit lỗi, giữ bản ghi để thử xóa lại.
+
+Ảnh trả về dưới dạng URL signed có hạn 15 phút, ảnh xem rộng 1600px và thumbnail 400px. Fetch lại resource để làm mới URL; không lưu URL dài hạn. DB chỉ giữ filePath/fileId. Tags phân loại hai cấp và slot; `tryOnAllowed=false` cho underwear/swimwear/sleepwear. Chặn POST /try-on sẽ làm ở BE-03. Ảnh mặc định do mobile quản lý state, chưa có API đặt mặc định.
+
+Nếu enqueue lỗi, API trả 503 và resource đã lưu chuyển failed; tải lại danh sách trước khi quyết định upload mới. Upload bị bỏ dở/chưa đăng ký có thể để lại file trên ImageKit; dọn orphan/grant cũ thuộc BE-05. Redis cho BullMQ production cần noeviction và persistence phù hợp; không tự thay chính sách instance dùng chung.
+
+Sau build, từ apps/api:
+
+```powershell
+node scripts/check-wardrobe-db.cjs
+# Kiểm tra live có một upload ảnh tổng hợp và gọi AI tính phí; tự dọn fixture.
+node scripts/check-wardrobe-live.cjs
+```
+
+DB self-check luôn rollback. Live smoke dùng danh tính fixture chỉ trong TestingModule, không thêm auth bypass vào ứng dụng.

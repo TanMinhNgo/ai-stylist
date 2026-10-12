@@ -2,6 +2,7 @@ import { RedisService } from './redis.service';
 import { RuntimeConfig } from '../config/runtime-config';
 
 const client = {
+  status: 'wait',
   on: jest.fn(),
   connect: jest.fn(),
   ping: jest.fn(),
@@ -18,6 +19,7 @@ describe('Redis readiness and lifecycle', () => {
   } as RuntimeConfig;
   beforeEach(() => {
     jest.clearAllMocks();
+    client.status = 'wait';
     client.connect.mockResolvedValue(undefined);
     client.ping.mockResolvedValue('PONG');
   });
@@ -38,6 +40,13 @@ describe('Redis readiness and lifecycle', () => {
       'unreachable',
     );
     expect(client.ping).not.toHaveBeenCalled();
+  });
+
+  it('reuses the connection BullMQ has already started', async () => {
+    client.status = 'connecting';
+    await new RedisService(config).onModuleInit();
+    expect(client.connect).not.toHaveBeenCalled();
+    expect(client.ping).toHaveBeenCalledTimes(1);
   });
 
   it('times out if a connected Redis does not answer PING', async () => {

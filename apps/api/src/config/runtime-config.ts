@@ -6,6 +6,12 @@ const schema = z.object({
   REDIS_URL: z.url().refine((url) => /^rediss?:/.test(url)),
   CLERK_SECRET_KEY: z.string().startsWith('sk_'),
   CLERK_WEBHOOK_SECRET: z.string().startsWith('whsec_').optional(),
+  IMAGEKIT_PUBLIC_KEY: z.string().optional(),
+  IMAGEKIT_PRIVATE_KEY: z.string().optional(),
+  IMAGEKIT_URL_ENDPOINT: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_VISION_MODEL: z.string().optional(),
+  OPENAI_EMBEDDING_MODEL: z.string().optional(),
 });
 
 @Injectable()

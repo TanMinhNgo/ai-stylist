@@ -14,7 +14,13 @@
         "REDIS_URL",
         "CLERK_SECRET_KEY",
         "CLERK_WEBHOOK_SECRET",
-        "CLERK_AUTHORIZED_PARTIES"
+        "CLERK_AUTHORIZED_PARTIES",
+        "IMAGEKIT_PUBLIC_KEY",
+        "IMAGEKIT_PRIVATE_KEY",
+        "IMAGEKIT_URL_ENDPOINT",
+        "OPENAI_API_KEY",
+        "OPENAI_VISION_MODEL",
+        "OPENAI_EMBEDDING_MODEL"
       ]
     }
   }

@@ -9,6 +9,8 @@ import { PrismaService } from '../src/database/prisma.service';
 import { RedisService } from '../src/queue/redis.service';
 import { IdentityProvider } from '../src/auth/identity.provider';
 import { UsersRepository } from '../src/auth/users.repository';
+import { getQueueToken } from '@nestjs/bullmq';
+import { AnalysisProcessor } from '../src/media/analysis.processor';
 
 describe('Clerk boundary (HTTP)', () => {
   let app: INestApplication<App>;
@@ -39,6 +41,10 @@ describe('Clerk boundary (HTTP)', () => {
       .useValue(identity)
       .overrideProvider(UsersRepository)
       .useValue(users)
+      .overrideProvider(getQueueToken('analysis'))
+      .useValue({ add: jest.fn() })
+      .overrideProvider(AnalysisProcessor)
+      .useValue({})
       .compile();
     app = module.createNestApplication({ rawBody: true });
     await app.init();

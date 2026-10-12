@@ -18,6 +18,8 @@ import { RuntimeConfig } from '../src/config/runtime-config';
 import { PrismaService } from '../src/database/prisma.service';
 import { RedisService } from '../src/queue/redis.service';
 import { IdentityProvider } from '../src/auth/identity.provider';
+import { getQueueToken } from '@nestjs/bullmq';
+import { AnalysisProcessor } from '../src/media/analysis.processor';
 
 // Test-only routes exercise production validation and error handling over HTTP.
 @Controller('probe')
@@ -58,6 +60,10 @@ describe('API foundation (HTTP)', () => {
       .overrideProvider(RedisService)
       .useValue({ client: {} })
       .overrideProvider(IdentityProvider)
+      .useValue({})
+      .overrideProvider(getQueueToken('analysis'))
+      .useValue({ add: jest.fn() })
+      .overrideProvider(AnalysisProcessor)
       .useValue({})
       .compile();
     app = fixture.createNestApplication();
