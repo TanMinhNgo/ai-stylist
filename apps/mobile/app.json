@@ -33,7 +33,15 @@
           "imageWidth": 76
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "AI Stylist dùng ảnh trong thư viện để thêm món đồ và ảnh người mẫu của bạn.",
+          "cameraPermission": "AI Stylist dùng camera để chụp món đồ và ảnh người mẫu của bạn.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

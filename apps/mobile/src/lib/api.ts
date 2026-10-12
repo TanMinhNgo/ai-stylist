@@ -14,7 +14,7 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-type Schema<T> = { safeParse(data: unknown): { success: true; data: T } | { success: false } };
+export type Schema<T> ={ safeParse(data: unknown): { success: true; data: T } | { success: false } };
 
 /** Call the API and parse the body with its @stylist/shared schema; every failure becomes a RequestError. */
 export async function request<T>(schema: Schema<T>, config: AxiosRequestConfig): Promise<T> {

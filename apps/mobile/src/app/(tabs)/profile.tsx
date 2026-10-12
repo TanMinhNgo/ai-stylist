@@ -1,7 +1,8 @@
 import { useAuth, useUser } from '@clerk/expo';
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Button, Card, ErrorState, Icon, LoadingState, Screen, Text } from '@/components/ui';
 import { useHealth } from '@/features/health/hooks';
@@ -41,6 +42,12 @@ export default function ProfileScreen() {
         </Card>
       ) : null}
 
+      <Pressable onPress={() => router.push('/model-photos')} accessibilityRole="button" style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.7 }]}>
+        <Icon ios="person.crop.rectangle" android="portrait" size={20} color={colors.accent} />
+        <Text variant="body" style={{ flex: 1 }}>Ảnh người mẫu</Text>
+        <Icon ios="chevron.right" android="chevron_right" size={14} color={colors.inkTertiary} />
+      </Pressable>
+
       <Text variant="footnote" color={colors.inkSecondary} style={styles.sectionLabel}>KẾT NỐI MÁY CHỦ</Text>
       <Card>
         {health.isPending ? (
@@ -79,6 +86,7 @@ const styles = StyleSheet.create({
   identity: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   avatar: { width: 64, height: 64, borderRadius: 32, overflow: 'hidden', backgroundColor: '#DCD6CC', alignItems: 'center', justifyContent: 'center' },
   avatarImage: { width: 64, height: 64 },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 52, paddingHorizontal: space.lg, borderRadius: radius.lg, backgroundColor: colors.surface },
   sectionLabel: { marginLeft: space.lg, marginBottom: -space.sm, letterSpacing: 0.3 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 44 },
   okDot: { width: 26, height: 26, borderRadius: radius.pill, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center' },

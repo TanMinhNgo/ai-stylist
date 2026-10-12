@@ -1,0 +1,17 @@
+// Pure helpers for paginated media lists (kept free of React Native imports so node can test them).
+
+type Item = { id: string; status: 'pending' | 'ready' | 'failed' };
+type Pages<T> = { pages: { items: T[]; nextCursor: string | null }[]; pageParams: unknown[] };
+
+/** Stop polling a pending item after this many fetches (~3 minutes at 3 s); the contract forbids endless polling. */
+export const MAX_POLLS = 60;
+
+export function hasPending(items: readonly Item[] | undefined): boolean {
+  return !!items?.some((item) => item.status === 'pending');
+}
+
+/** Drop one item from every page, for optimistic deletes. */
+export function removeFromPages<T extends Item>(data: Pages<T> | undefined, id: string): Pages<T> | undefined {
+  if (!data) return data;
+  return { ...data, pages: data.pages.map((page) => ({ ...page, items: page.items.filter((item) => item.id !== id) })) };
+}

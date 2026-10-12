@@ -38,6 +38,13 @@ const MESSAGES: Record<ClientErrorCode, string> = {
   NOT_FOUND: 'Không tìm thấy nội dung bạn cần.',
   VALIDATION_ERROR: 'Thông tin gửi đi chưa hợp lệ, vui lòng kiểm tra lại.',
   INTERNAL_ERROR: 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau ít phút.',
+  UPLOAD_INVALID: 'Ảnh tải lên không hợp lệ, hãy thử lại.',
+  UPLOAD_EXPIRED: 'Phiên tải ảnh đã hết hạn, hãy thử lại.',
+  PHOTO_NOT_FULL_BODY: 'Ảnh chưa thấy đủ toàn thân. Lùi ra xa để thấy cả bàn chân rồi chụp lại.',
+  PHOTO_MULTIPLE_PEOPLE: 'Ảnh có nhiều người. Hãy chụp ảnh chỉ có mình bạn.',
+  PHOTO_NOT_ALLOWED: 'Ảnh này không dùng được để thử đồ. Hãy chọn ảnh khác.',
+  PHOTO_NOT_USABLE: 'Ảnh quá tối hoặc mờ. Chụp lại ở nơi đủ sáng nhé.',
+  MEDIA_PROCESSING_FAILED: 'AI chưa xử lý được ảnh này. Hãy thử ảnh khác.',
   NETWORK_ERROR: 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
   BAD_RESPONSE: 'Phản hồi từ máy chủ không đúng định dạng.',
 };
