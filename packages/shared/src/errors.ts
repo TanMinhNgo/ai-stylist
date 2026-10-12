@@ -6,6 +6,13 @@ export const ErrorCode = z.enum([
   'NOT_FOUND',
   'VALIDATION_ERROR',
   'INTERNAL_ERROR',
+  'UPLOAD_INVALID',
+  'UPLOAD_EXPIRED',
+  'PHOTO_NOT_FULL_BODY',
+  'PHOTO_MULTIPLE_PEOPLE',
+  'PHOTO_NOT_ALLOWED',
+  'PHOTO_NOT_USABLE',
+  'MEDIA_PROCESSING_FAILED',
 ]);
 export type ErrorCode = z.infer<typeof ErrorCode>;
 
