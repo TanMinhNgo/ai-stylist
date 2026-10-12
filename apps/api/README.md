@@ -1,6 +1,6 @@
 # API AI Stylist
 
-Backend NestJS cho BE-01/BE-02. Node 24 và npm 11; chạy lệnh cài đặt từ gốc repo để link `@stylist/shared`.
+Backend NestJS cho BE-01/BE-02/BE-03. Node 24 và npm 11; chạy lệnh cài đặt từ gốc repo để link `@stylist/shared`.
 
 ## Chạy local
 
@@ -113,3 +113,59 @@ node scripts/check-wardrobe-live.cjs
 ```
 
 DB self-check luôn rollback. Live smoke dùng danh tính fixture chỉ trong TestingModule, không thêm auth bypass vào ứng dụng.
+
+## BE-03: thử đồ nội bộ
+
+`POST /try-on` yêu cầu Bearer token và header `Idempotency-Key` (8–128 ký tự chữ/số/gạch nối/gạch dưới). Body theo `CreateTryOnRequest`:
+
+```json
+{
+  "modelPhotoId": "UUID-của-ảnh-người-mẫu-ready",
+  "garmentIds": ["UUID-của-món-ready"],
+  "occasion": "Đi làm"
+}
+```
+
+Response 201 `{jobId}`; cùng key cùng payload trả job cũ, khác payload trả 409 IDEMPOTENCY_CONFLICT. Mỗi thao tác giữ key khi retry; tạo lại chủ động dùng key mới. Kiểm tra ownership/ready và tags an toàn trước tạo job, rồi kiểm tra lại trong worker. Underwear/swimwear/sleepwear không được try-on. Chưa kiểm tra xung đột slot; người dùng tự chọn 1–4 món.
+
+`GET /try-on/:id` trả `TryOnJobResponse`: id/status/provider/createdAt/resultUrl/errorCode/outfitId. Poll queued/processing đến done/failed. Khi done, URL ảnh private có chữ ký 15 phút; GET lại để làm mới. Outfit được tạo một lần, advice và savedAt chưa có giá trị; chức năng lưu lookbook thuộc BE-04.
+
+- `TRYON_PROVIDER=openai` (mặc định): OpenAI Images edits với OPENAI_IMAGE_MODEL, tối đa 5 ảnh tham chiếu resize, một ảnh PNG 1024x1536 quality medium. Key/model hiện có giữ nguyên. Adapter theo [OpenAI Docs: Image generation](https://developers.openai.com/api/docs/guides/image-generation); chất lượng try-on thật chưa nghiệm thu phase 0A.
+- `TRYON_PROVIDER=fake`: một PNG mock cố định, không gọi OpenAI. Chỉ local/test, bị từ chối khi NODE_ENV=production. Response provider=fake để UI báo rõ.
+- Worker cùng tiến trình API, concurrency 1; 3 attempts cho lỗi an toàn (reference fetch trước AI, HTTP 429). Nội dung bị từ chối không retry. Timeout/network/5xx sau AI có thể đã tạo ảnh hoặc tính phí, nên failed thay vì tự gọi lại. Marker generation và checkpoint file bảo vệ chạy lại; không bảo đảm exactly-once ở provider khi mất kết nối.
+- Job có deadline 15 phút; sweep mỗi phút và khi startup, GET cũng kiểm tra quá hạn. DB unavailable thì không thể cập nhật trạng thái đến khi DB hồi phục. File kết quả dùng tên job cố định và không ghi đè; outfit + done ghi cùng transaction.
+- UsageService reserve/refund hiện là hooks chưa có quota, refund đánh dấu một lần. Chỉ chạy nội bộ trước BE-05. Redis noeviction/persistence và orphan cleanup vẫn cần hoàn thiện trước production.
+
+Thử toàn luồng không gọi AI, từ apps/api sau build/migrate:
+
+```powershell
+node scripts/check-try-on-live.cjs
+```
+
+Script dùng identity fixture trong TestingModule, Neon/Redis/ImageKit thật; seed ảnh/món đã phân tích vào DB, kiểm tra concurrent idempotency, ownership, signed/private result, hạn chế trang phục, input chưa ready, sweep timeout và reserve/refund một lần. Tự dọn fixture/file/job. Đây là kiểm chứng cơ chế, không chứng minh chất lượng ảnh thử đồ.
+
+Để chạy fake với mobile: đặt TRYON_PROVIDER=fake trong môi trường lần chạy hoặc .env local, rồi khởi động backend trước bằng launcher hiện có. Không ghi IP cố định; npm run dev vẫn lấy LAN hiện tại và chờ health trước Expo.
+
+
+## Tủ đồ AI và hình ma nơ canh — nội bộ
+
+`ASSET_GENERATION_ENABLED=false` mặc định. Local bật `ASSET_GENERATION_ENABLED=true`; production bắt buộc thêm `ASSET_GENERATION_USER_IDS` là UUID nội bộ từ GET /me, phân cách bằng dấu phẩy. `ASSET_PROVIDER=openai` dùng key/model hiện có; fake chỉ dev/test, UI phải ghi rõ mock. Không sửa IP cố định: launcher vẫn chọn LAN mỗi lần chạy và chờ API trước Expo.
+
+- Từ ảnh: một món/pair mỗi ảnh, chọn loại và crop nếu đang mặc. POST /garments thêm `generateAsset:true, bodyKey:m|f, requestedType`. Analysis hoàn tất mới tự xếp job tạo PNG; hết lượt/lỗi vẫn giữ món gốc. Nếu requestedType khác phân loại, không gọi image generation, user cần ảnh rõ hơn.
+- Từ ý tưởng: POST /garment-ideas nhận IdeaRequest (menu/type/prompt/bodyKey), GET /garment-ideas/:id trả đề xuất tối đa 4 món. Chỉ tạo ảnh sau khi user xác nhận POST /garment-asset-jobs với items 1–4. POST cả hai luồng bắt buộc Idempotency-Key. GET /garment-asset-jobs/:id theo dõi queued/processing/ready/failed. Garment mới có source=ai_concept, không giả thành quần áo người dùng sở hữu.
+- GET /asset-generation/quota: 5 ảnh/ngày/user chung photo/idea, 10 lần gợi ý/ngày; reset 00:00 Asia/Saigon. Khóa user trong transaction giữ quota và idempotency khi gọi đồng thời. Lỗi chắc chắn chưa tạo ảnh hoàn lượt; timeout/mất receipt giữ lượt và không gọi image AI lại. Lần gợi ý đã bắt đầu vẫn tính trong cap 10 dù thất bại. Analysis ảnh gốc chưa thuộc quota này.
+- PNG chuẩn hóa alpha, bounds=[left,top,width,height], khung 1024x1536 cho trang phục hoặc 1024x1024 cho phụ kiện. URL private ký 15 phút, format PNG giữ alpha; GET lại để làm mới. Mỗi garment hiện trả một mannequinAsset: biến thể mới thay ảnh hiện tại; file cũ giữ trong jobs và xóa cùng garment. Deferred không tự chạy lúc ngày mới, user bấm tạo hình.
+- Worker concurrency 1, deadline 15 phút, sweep mỗi phút; checkpoint phục hồi finalize không tạo lại ảnh. DELETE tombstone trước xóa file, job chậm không hồi sinh món. Timeout upload/checkpoint có thể để file orphan; reconciliation/purge thuộc BE-05. Redis allkeys-lru cần đổi sang noeviction/persistence trước production.
+
+Bộ mẫu: packages/shared/assets/wardrobe (18 món) + formalwear (4 bộ), manifest có demoOnly; không cấp Garment ID và không gửi mẫu lên try-on. Claude tích hợp apps/mobile: crop/upload/ý tưởng, polling hữu hạn, ảnh chính diện và proxy 3D khi xoay. PNG không phải mesh/UV hay bản mô phỏng độ vừa thật.
+
+Sau build/migrate, từ apps/api:
+
+```powershell
+# DB/Redis/ImageKit thật, fake AI, tự dọn fixture:
+node scripts/check-assets-live.cjs
+# Có tính phí: tối đa 2 lượt image AI, ảnh tham chiếu tổng hợp, tự dọn file cloud:
+node scripts/check-assets-provider.cjs
+```
+
+Provider smoke đã tạo áo từ ảnh và nhẫn từ ý tưởng bằng model hiện có, xác nhận alpha và signed ImageKit PNG; report cục bộ trong .artifacts/mannequin-smoke. Không thay thế nghiệm thu ảnh người dùng, thiết bị hoặc đo chi phí production.

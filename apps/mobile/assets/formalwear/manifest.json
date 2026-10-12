@@ -1,0 +1,292 @@
+{
+  "version": 1,
+  "generator": "built-in image_gen",
+  "usage": "2D preview or calibrated front-view overlay; not a UV texture or 3D clothing mesh",
+  "items": [
+    {
+      "id": "navy-business",
+      "label": "Suit navy công sở",
+      "file": "navy-business.png",
+      "bodyKey": "m",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 1489125,
+      "role": "generated-preset-preview",
+      "demoOnly": true,
+      "details": {
+        "lapel": "notch",
+        "neckwear": "burgundy necktie",
+        "pattern": "solid",
+        "cloth": "#253858",
+        "shirt": "#F4F3F0",
+        "shoes": "#1E1E22"
+      },
+      "lookTags": [
+        {
+          "category": "top",
+          "type": "shirt",
+          "slot": "top",
+          "colors": [
+            "#F4F3F0"
+          ],
+          "fit": "regular",
+          "length": "regular",
+          "sleeve": "long"
+        },
+        {
+          "category": "outerwear",
+          "type": "blazer",
+          "slot": "outer",
+          "colors": [
+            "#253858"
+          ],
+          "fit": "regular",
+          "length": "regular",
+          "sleeve": "long"
+        },
+        {
+          "category": "pants",
+          "type": "trousers",
+          "slot": "bottom",
+          "colors": [
+            "#253858"
+          ],
+          "fit": "regular",
+          "length": "long",
+          "sleeve": null
+        },
+        {
+          "category": "shoes",
+          "type": "loafers",
+          "slot": "shoes",
+          "colors": [
+            "#1E1E22"
+          ],
+          "fit": "regular",
+          "length": "regular",
+          "sleeve": null
+        }
+      ],
+      "bounds": [
+        214,
+        46,
+        597,
+        1448
+      ]
+    },
+    {
+      "id": "charcoal-pinstripe",
+      "label": "Suit xám sọc nhỏ",
+      "file": "charcoal-pinstripe.png",
+      "bodyKey": "m",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 1639998,
+      "role": "generated-preset-preview",
+      "demoOnly": true,
+      "details": {
+        "lapel": "peak",
+        "neckwear": "navy necktie",
+        "pattern": "pinstripe",
+        "cloth": "#3A3A40",
+        "shirt": "#F4F1EA",
+        "shoes": "#1E1E22"
+      },
+      "lookTags": [
+        {
+          "category": "top",
+          "type": "shirt",
+          "slot": "top",
+          "colors": [
+            "#F4F1EA"
+          ],
+          "fit": "regular",
+          "length": "regular",
+          "sleeve": "long"
+        },
+        {
+          "category": "outerwear",
+          "type": "blazer",
+          "slot": "outer",
+          "colors": [
+            "#3A3A40"
+          ],
+          "fit": "regular",
+          "length": "regular",
+          "sleeve": "long"
+        },
+        {
+          "category": "pants",
+          "type": "trousers",
+          "slot": "bottom",
+          "colors": [
+            "#3A3A40"
+          ],
+          "fit": "regular",
+          "length": "long",
+          "sleeve": null
+        },
+        {
+          "category": "shoes",
+          "type": "loafers",
+          "slot": "shoes",
+          "colors": [
+            "#1E1E22"
+          ],
+          "fit": "regular",
+          "length": "regular",
+          "sleeve": null
+        }
+      ],
+      "bounds": [
+        232,
+        50,
+        560,
+        1431
+      ]
+    },
+    {
+      "id": "black-tuxedo",
+      "label": "Tuxedo đen",
+      "file": "black-tuxedo.png",
+      "bodyKey": "m",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 1332080,
+      "role": "generated-preset-preview",
+      "demoOnly": true,
+      "details": {
+        "lapel": "shawl",
+        "neckwear": "black bow tie",
+        "pattern": "solid",
+        "cloth": "#1E1E22",
+        "shirt": "#F4F3F0",
+        "shoes": "#1E1E22"
+      },
+      "lookTags": [
+        {
+          "category": "top",
+          "type": "shirt",
+          "slot": "top",
+          "colors": [
+            "#F4F3F0"
+          ],
+          "fit": "slim",
+          "length": "regular",
+          "sleeve": "long"
+        },
+        {
+          "category": "outerwear",
+          "type": "blazer",
+          "slot": "outer",
+          "colors": [
+            "#1E1E22"
+          ],
+          "fit": "slim",
+          "length": "regular",
+          "sleeve": "long"
+        },
+        {
+          "category": "pants",
+          "type": "trousers",
+          "slot": "bottom",
+          "colors": [
+            "#1E1E22"
+          ],
+          "fit": "regular",
+          "length": "long",
+          "sleeve": null
+        },
+        {
+          "category": "shoes",
+          "type": "loafers",
+          "slot": "shoes",
+          "colors": [
+            "#1E1E22"
+          ],
+          "fit": "regular",
+          "length": "regular",
+          "sleeve": null
+        }
+      ],
+      "bounds": [
+        215,
+        27,
+        594,
+        1463
+      ]
+    },
+    {
+      "id": "ivory-womens-suit",
+      "label": "Suit nữ màu kem",
+      "file": "ivory-womens-suit.png",
+      "bodyKey": "f",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 1370200,
+      "role": "generated-preset-preview",
+      "demoOnly": true,
+      "details": {
+        "lapel": "peak",
+        "neckwear": "none",
+        "pattern": "solid",
+        "cloth": "#EDE3D1",
+        "shirt": "#E3D1B5",
+        "shoes": "#C69C6D"
+      },
+      "lookTags": [
+        {
+          "category": "top",
+          "type": "blouse",
+          "slot": "top",
+          "colors": [
+            "#E3D1B5"
+          ],
+          "fit": "regular",
+          "length": "regular",
+          "sleeve": "long"
+        },
+        {
+          "category": "outerwear",
+          "type": "blazer",
+          "slot": "outer",
+          "colors": [
+            "#EDE3D1"
+          ],
+          "fit": "regular",
+          "length": "regular",
+          "sleeve": "long"
+        },
+        {
+          "category": "pants",
+          "type": "wide_leg",
+          "slot": "bottom",
+          "colors": [
+            "#EDE3D1"
+          ],
+          "fit": "loose",
+          "length": "long",
+          "sleeve": null
+        },
+        {
+          "category": "shoes",
+          "type": "heels",
+          "slot": "shoes",
+          "colors": [
+            "#C69C6D"
+          ],
+          "fit": "regular",
+          "length": "regular",
+          "sleeve": null
+        }
+      ],
+      "bounds": [
+        255,
+        43,
+        514,
+        1420
+      ]
+    }
+  ],
+  "boundsFormat": "left,top,width,height; alpha>16"
+}

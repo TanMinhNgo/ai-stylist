@@ -9,6 +9,7 @@ import {
 import { MediaRepository } from './media.repository';
 import { ImageStorageProvider } from '../uploads/image-storage.provider';
 import { VisionProvider } from './vision.provider';
+import { AssetService } from '../garment-assets/asset.service';
 
 const payload = z.strictObject({
   kind: z.enum(['model-photo', 'garment']),
@@ -22,6 +23,7 @@ export class AnalysisProcessor extends WorkerHost {
     private readonly repository: MediaRepository,
     private readonly storage: ImageStorageProvider,
     private readonly vision: VisionProvider,
+    private readonly assets?: AssetService,
   ) {
     super();
   }
@@ -57,6 +59,7 @@ export class AnalysisProcessor extends WorkerHost {
           .length(EMBEDDING_DIMENSIONS)
           .parse(await this.vision.embedding(JSON.stringify(tags)));
         await this.repository.readyGarment(userId, id, tags, embedding);
+        await this.assets?.auto(userId, id);
       }
     } catch (error) {
       const invalid = error instanceof z.ZodError;

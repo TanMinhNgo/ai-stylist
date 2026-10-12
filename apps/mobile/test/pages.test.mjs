@@ -18,4 +18,9 @@ test('hasPending only for pending items', () => {
   assert.equal(hasPending(page(['a', 'p1']).items), true);
   assert.equal(hasPending(page(['a']).items), false);
   assert.equal(hasPending(undefined), false);
+  const withJob = (status) => [{ id: 'a', status: 'ready', assetJob: { status } }];
+  assert.equal(hasPending(withJob('processing')), true, 'asset still generating');
+  assert.equal(hasPending(withJob('queued')), true);
+  assert.equal(hasPending(withJob('deferred')), false, 'deferred waits for quota, polling would not change it');
+  assert.equal(hasPending(withJob('ready')), false);
 });

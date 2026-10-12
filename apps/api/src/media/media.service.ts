@@ -14,12 +14,14 @@ import {
   UploadAuthResponse,
   isTryOnAllowed,
   type CreateMediaRequest,
+  type CreateGarmentRequest,
   type MediaListQuery,
   type GarmentListQuery,
 } from '@stylist/shared';
 import { MediaRepository, MediaKind } from './media.repository';
 import { ImageStorageProvider } from '../uploads/image-storage.provider';
 import type { StoredImage } from '../uploads/image-storage.provider';
+import { AssetService } from '../garment-assets/asset.service';
 
 @Injectable()
 export class MediaService {
@@ -27,6 +29,7 @@ export class MediaService {
     private readonly repository: MediaRepository,
     private readonly storage: ImageStorageProvider,
     @InjectQueue('analysis') private readonly queue: Queue,
+    private readonly assets?: AssetService,
   ) {}
 
   async uploadAuth(userId: string) {
@@ -47,14 +50,19 @@ export class MediaService {
     kind: MediaKind,
     row: Awaited<ReturnType<MediaRepository['register']>>,
   ) {
+    const concept = 'source' in row && row.source === 'ai_concept';
     const base = {
       id: row.id,
       imagekitFileId: row.imagekitFileId,
       status: row.status,
       errorCode: row.errorCode,
       createdAt: row.createdAt.toISOString(),
-      url: this.storage.url(row.filePath, 1600),
-      thumbnailUrl: this.storage.url(row.filePath, 400),
+      url: concept
+        ? this.storage.url(row.filePath, 1600, 'png')
+        : this.storage.url(row.filePath, 1600),
+      thumbnailUrl: concept
+        ? this.storage.url(row.filePath, 400, 'png')
+        : this.storage.url(row.filePath, 400),
     };
     if (kind === 'model-photo')
       return ModelPhoto.parse({
@@ -66,10 +74,35 @@ export class MediaService {
       ...base,
       tags,
       tryOnAllowed: tags ? isTryOnAllowed(tags.type) : null,
+      source: 'source' in row ? row.source : 'user_photo',
+      mannequinAsset:
+        'currentAsset' in row
+          ? (this.assets?.render(row.currentAsset) ?? null)
+          : null,
+      assetJob:
+        'assetJobs' in row && row.assetJobs?.[0]
+          ? {
+              id: row.assetJobs[0].id,
+              status: row.assetJobs[0].status,
+              bodyKey: row.assetJobs[0].bodyKey,
+              errorCode: row.assetJobs[0].errorCode,
+            }
+          : 'assetErrorCode' in row && row.assetErrorCode
+            ? {
+                id: null,
+                status: 'deferred',
+                bodyKey: row.assetBodyKey,
+                errorCode: row.assetErrorCode,
+              }
+            : null,
     });
   }
 
-  async create(kind: MediaKind, userId: string, input: CreateMediaRequest) {
+  async create(
+    kind: MediaKind,
+    userId: string,
+    input: CreateMediaRequest | CreateGarmentRequest,
+  ) {
     const grant = await this.repository.grant(input.uploadToken, userId);
     if (!grant) throw new NotFoundException();
     if (grant.usedAt || grant.expiresAt <= new Date())
@@ -103,11 +136,20 @@ export class MediaService {
         message: 'Image does not match this upload authorization',
       });
     }
+    const options =
+      kind === 'garment' && 'generateAsset' in input
+        ? {
+            generateAsset: input.generateAsset,
+            assetBodyKey: input.bodyKey,
+            requestedType: input.requestedType,
+          }
+        : undefined;
     const row = await this.repository.register(
       kind,
       input.uploadToken,
       userId,
       file,
+      options,
     );
     try {
       await this.queue.add(
@@ -157,7 +199,11 @@ export class MediaService {
   async remove(kind: MediaKind, userId: string, id: string) {
     const row = await this.repository.find(kind, userId, id);
     if (!row) throw new NotFoundException();
-    await this.storage.delete(row.imagekitFileId);
+    const files =
+      kind === 'garment'
+        ? await this.repository.prepareGarmentDelete(userId, id)
+        : [row.imagekitFileId];
+    for (const file of files) await this.storage.delete(file);
     await this.repository.remove(kind, userId, id);
     return { deleted: true as const };
   }

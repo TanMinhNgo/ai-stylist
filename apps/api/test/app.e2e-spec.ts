@@ -1,3 +1,5 @@
+import { AssetProcessor } from '../src/garment-assets/asset.processor';
+import { TryOnProcessor } from '../src/try-on/try-on.processor';
 import { Test } from '@nestjs/testing';
 import {
   Body,
@@ -64,6 +66,14 @@ describe('API foundation (HTTP)', () => {
       .overrideProvider(getQueueToken('analysis'))
       .useValue({ add: jest.fn() })
       .overrideProvider(AnalysisProcessor)
+      .useValue({})
+      .overrideProvider(getQueueToken('try-on'))
+      .useValue({ add: jest.fn() })
+      .overrideProvider(TryOnProcessor)
+      .useValue({})
+      .overrideProvider(getQueueToken('garment-assets'))
+      .useValue({ add: jest.fn() })
+      .overrideProvider(AssetProcessor)
       .useValue({})
       .compile();
     app = fixture.createNestApplication();

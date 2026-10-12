@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import type { Prisma } from '../generated/prisma/client';
 import type {
   GarmentTags,
   MediaListQuery,
@@ -13,6 +14,14 @@ import type {
 import { EMBEDDING_DIMENSIONS } from '@stylist/shared';
 
 export type MediaKind = 'model-photo' | 'garment';
+const garmentRelations = {
+  currentAsset: true,
+  assetJobs: {
+    where: { deletedAt: null },
+    orderBy: { createdAt: 'desc' as const },
+    take: 1,
+  },
+};
 
 @Injectable()
 export class MediaRepository {
@@ -32,6 +41,11 @@ export class MediaRepository {
     token: string,
     userId: string,
     file: { fileId: string; filePath: string },
+    options?: {
+      generateAsset: boolean;
+      assetBodyKey: string;
+      requestedType?: string;
+    },
   ) {
     return this.prisma.$transaction(async (tx) => {
       const claimed = await tx.uploadGrant.updateMany({
@@ -55,14 +69,17 @@ export class MediaRepository {
         filePath: file.filePath,
       };
       return kind === 'garment'
-        ? tx.garment.create({ data })
+        ? tx.garment.create({
+            data: { ...data, ...options },
+            include: garmentRelations,
+          })
         : tx.modelPhoto.create({ data });
     });
   }
   find(kind: MediaKind, userId: string, id: string) {
     const where = { id, userId, user: { deletedAt: null } };
     return kind === 'garment'
-      ? this.prisma.garment.findFirst({ where })
+      ? this.prisma.garment.findFirst({ where, include: garmentRelations })
       : this.prisma.modelPhoto.findFirst({ where });
   }
   async list(
@@ -80,6 +97,7 @@ export class MediaRepository {
     };
     return kind === 'garment'
       ? this.prisma.garment.findMany({
+          include: garmentRelations,
           ...args,
           where: {
             ...args.where,
@@ -112,6 +130,7 @@ export class MediaRepository {
     id: string,
     tags: GarmentTags,
     embedding: number[],
+    db: Prisma.TransactionClient = this.prisma,
   ) {
     if (
       embedding.length !== EMBEDDING_DIMENSIONS ||
@@ -119,10 +138,10 @@ export class MediaRepository {
     )
       throw new Error('Invalid embedding');
     const vector = '[' + embedding.join(',') + ']';
-    await this.prisma.$executeRaw`
+    await db.$executeRaw`
       UPDATE garments SET tags = ${JSON.stringify(tags)}::jsonb, category = ${tags.category},
         embedding = ${vector}::vector, status = 'ready', prompt_version = 'garment-v1', error_code = NULL
-      WHERE id = ${id}::uuid AND user_id = ${userId}::uuid AND status = 'pending'
+      WHERE id = ${id}::uuid AND user_id = ${userId}::uuid AND status = 'pending' AND deleting_at IS NULL
         AND EXISTS (SELECT 1 FROM users WHERE users.id = ${userId}::uuid AND deleted_at IS NULL)
     `;
   }
@@ -130,5 +149,46 @@ export class MediaRepository {
     if (kind === 'garment')
       await this.prisma.garment.deleteMany({ where: { id, userId } });
     else await this.prisma.modelPhoto.deleteMany({ where: { id, userId } });
+  }
+  prepareGarmentDelete(userId: string, id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const row = await tx.garment.findFirst({
+        where: { id, userId, user: { deletedAt: null } },
+      });
+      if (!row) throw new NotFoundException();
+      await tx.garment.updateMany({
+        where: { id, userId },
+        data: { deletingAt: new Date(), generateAsset: false },
+      });
+      await tx.assetJob.updateMany({
+        where: {
+          garmentId: id,
+          userId,
+          deletedAt: null,
+          status: { in: ['queued', 'processing'] },
+          generationStartedAt: null,
+        },
+        data: { refundedAt: new Date() },
+      });
+      await tx.assetJob.updateMany({
+        where: { garmentId: id, userId, deletedAt: null },
+        data: {
+          deletedAt: new Date(),
+          status: 'failed',
+          errorCode: 'NOT_FOUND',
+        },
+      });
+      const assetJobs = await tx.assetJob.findMany({
+        where: { garmentId: id, userId },
+      });
+      return [
+        ...new Set([
+          row.imagekitFileId,
+          ...assetJobs
+            .map((j) => j.resultFileId)
+            .filter((file): file is string => Boolean(file)),
+        ]),
+      ];
+    });
   }
 }

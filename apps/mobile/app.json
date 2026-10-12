@@ -41,7 +41,8 @@
           "cameraPermission": "AI Stylist dùng camera để chụp món đồ và ảnh người mẫu của bạn.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

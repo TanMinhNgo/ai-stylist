@@ -18,6 +18,9 @@ model User {
   uploadGrants   UploadGrant[]
   modelPhotos    ModelPhoto[]
   garments       Garment[]
+  tryOnJobs      TryOnJob[]
+  outfits        Outfit[]
+  assetJobs      AssetJob[]
 
   @@map("users")
 }
@@ -62,7 +65,91 @@ model Garment {
   promptVersion  String?  @map("prompt_version")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   user           User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  source         String   @default("user_photo")
+  generateAsset  Boolean  @default(false) @map("generate_asset")
+  assetBodyKey   String   @default("f") @map("asset_body_key")
+  requestedType  String?  @map("requested_type")
+  assetErrorCode String?  @map("asset_error_code")
+  deletingAt     DateTime? @map("deleting_at") @db.Timestamptz(3)
+  currentAssetId String?  @map("current_asset_id") @db.Uuid
+  currentAsset   AssetJob? @relation("CurrentAsset", fields: [currentAssetId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  assetJobs      AssetJob[] @relation("GarmentAssets")
   @@index([userId, createdAt, id])
   @@index([userId, category])
   @@map("garments")
+}
+
+model AssetJob {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @map("user_id") @db.Uuid
+  batchKey            String   @map("batch_key")
+  itemIndex           Int      @map("item_index")
+  requestHash         String   @map("request_hash")
+  kind                String
+  input               Json
+  bodyKey             String   @map("body_key")
+  garmentId           String?  @map("garment_id") @db.Uuid
+  status              String   @default("queued")
+  provider            String
+  imageModel          String   @map("image_model")
+  promptVersion       String   @default("asset-v1") @map("prompt_version")
+  errorCode           String?  @map("error_code")
+  generationStartedAt DateTime? @map("generation_started_at") @db.Timestamptz(3)
+  quotaDay            String   @map("quota_day")
+  refundedAt          DateTime? @map("refunded_at") @db.Timestamptz(3)
+  resultFileId        String?  @unique @map("result_file_id")
+  resultFilePath      String?  @map("result_file_path")
+  renderMeta          Json?    @map("render_meta")
+  proposals           Json?
+  deadlineAt          DateTime @map("deadline_at") @db.Timestamptz(3)
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user                User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  garment             Garment? @relation("GarmentAssets", fields: [garmentId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  currentFor          Garment[] @relation("CurrentAsset")
+  @@unique([userId, batchKey, itemIndex])
+  @@index([userId, quotaDay, kind, refundedAt])
+  @@index([status, deadlineAt])
+  @@map("asset_jobs")
+}
+
+model TryOnJob {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @map("user_id") @db.Uuid
+  idempotencyKey      String   @map("idempotency_key")
+  requestHash         String   @map("request_hash")
+  modelPhotoId        String   @map("model_photo_id") @db.Uuid
+  garmentIds          String[] @map("garment_ids") @db.Uuid
+  occasion            String
+  status              String   @default("queued")
+  provider            String
+  imageModel          String   @map("image_model")
+  promptVersion       String   @default("tryon-v1") @map("prompt_version")
+  errorCode           String?  @map("error_code")
+  generationStartedAt DateTime? @map("generation_started_at") @db.Timestamptz(3)
+  resultFileId        String?  @unique @map("result_file_id")
+  resultFilePath      String?  @map("result_file_path")
+  refundedAt          DateTime? @map("refunded_at") @db.Timestamptz(3)
+  deadlineAt          DateTime @map("deadline_at") @db.Timestamptz(3)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user                User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  outfit              Outfit?
+  @@unique([userId, idempotencyKey])
+  @@index([status, deadlineAt])
+  @@map("tryon_jobs")
+}
+
+model Outfit {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  tryOnJobId     String   @unique @map("tryon_job_id") @db.Uuid
+  imagekitFileId String   @unique @map("imagekit_file_id")
+  filePath       String   @map("file_path")
+  advice         Json?
+  savedAt        DateTime? @map("saved_at") @db.Timestamptz(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user           User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tryOnJob       TryOnJob @relation(fields: [tryOnJobId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  @@index([userId, createdAt])
+  @@map("outfits")
 }

@@ -39,4 +39,13 @@ describe('RuntimeConfig', () => {
     process.env.CLERK_AUTHORIZED_PARTIES = '';
     expect(new RuntimeConfig().authorizedParties).toEqual([]);
   });
+
+  it('permits fake try-on only outside production', () => {
+    process.env.TRYON_PROVIDER = 'fake';
+    expect(new RuntimeConfig().values.TRYON_PROVIDER).toBe('fake');
+    process.env.NODE_ENV = 'production';
+    expect(() => new RuntimeConfig()).toThrow('disabled in production');
+    process.env.TRYON_PROVIDER = 'openai';
+    expect(new RuntimeConfig().values.TRYON_PROVIDER).toBe('openai');
+  });
 });

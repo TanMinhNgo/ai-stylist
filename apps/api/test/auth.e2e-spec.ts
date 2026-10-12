@@ -1,3 +1,5 @@
+import { AssetProcessor } from '../src/garment-assets/asset.processor';
+import { TryOnProcessor } from '../src/try-on/try-on.processor';
 import { Test } from '@nestjs/testing';
 import { INestApplication, UnauthorizedException } from '@nestjs/common';
 import { ApiError, MeResponse } from '@stylist/shared';
@@ -44,6 +46,14 @@ describe('Clerk boundary (HTTP)', () => {
       .overrideProvider(getQueueToken('analysis'))
       .useValue({ add: jest.fn() })
       .overrideProvider(AnalysisProcessor)
+      .useValue({})
+      .overrideProvider(getQueueToken('try-on'))
+      .useValue({ add: jest.fn() })
+      .overrideProvider(TryOnProcessor)
+      .useValue({})
+      .overrideProvider(getQueueToken('garment-assets'))
+      .useValue({ add: jest.fn() })
+      .overrideProvider(AssetProcessor)
       .useValue({})
       .compile();
     app = module.createNestApplication({ rawBody: true });

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ErrorCode } from './errors';
+import { BodyKey, MannequinAsset, AssetJobSummary } from './mannequin-asset';
 
 export const ProcessingStatus = z.enum(['pending', 'ready', 'failed']);
 export type ProcessingStatus = z.infer<typeof ProcessingStatus>;
@@ -62,7 +63,7 @@ export const UploadAuthResponse = z.strictObject({
 });
 export const CreateMediaRequest = z.strictObject({ imagekitFileId: z.string().min(1).max(128), url: z.url(), uploadToken: z.uuid() });
 export const CreateModelPhotoRequest = CreateMediaRequest;
-export const CreateGarmentRequest = CreateMediaRequest;
+export const CreateGarmentRequest = CreateMediaRequest.extend({generateAsset:z.boolean().default(false),bodyKey:BodyKey.default('f'),requestedType:GarmentType.optional()});
 export type CreateModelPhotoRequest = z.infer<typeof CreateModelPhotoRequest>;
 export type CreateGarmentRequest = z.infer<typeof CreateGarmentRequest>;
 export const ResourceIdParams = z.strictObject({ id: z.uuid() });
@@ -73,7 +74,7 @@ const MediaBase = z.strictObject({
   status: ProcessingStatus, errorCode: ErrorCode.nullable(), createdAt: z.iso.datetime(),
 });
 export const ModelPhoto = MediaBase.extend({ analysis: ModelPhotoAnalysis.nullable() });
-export const Garment = MediaBase.extend({ tags: GarmentTags.nullable(), tryOnAllowed: z.boolean().nullable() });
+export const Garment = MediaBase.extend({ tags: GarmentTags.nullable(), tryOnAllowed: z.boolean().nullable(), source:z.enum(['user_photo','ai_concept']).default('user_photo'), mannequinAsset:MannequinAsset.nullable().default(null), assetJob:AssetJobSummary.nullable().default(null) });
 export const ModelPhotoListResponse = z.strictObject({ items: z.array(ModelPhoto), nextCursor: z.uuid().nullable() });
 export const GarmentListResponse = z.strictObject({ items: z.array(Garment), nextCursor: z.uuid().nullable() });
 export const DeleteMediaResponse = z.strictObject({ deleted: z.literal(true) });

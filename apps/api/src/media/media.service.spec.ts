@@ -25,12 +25,14 @@ describe('Media registration and ownership', () => {
     find: jest.fn(),
     list: jest.fn(),
     remove: jest.fn(),
+    prepareGarmentDelete: jest.fn(),
   };
   const storage = {
     authentication: jest.fn(),
     get: jest.fn(),
     url: jest.fn(),
     delete: jest.fn(),
+    saveResult: jest.fn(),
   };
   const queue = { add: jest.fn() };
   const service = new MediaService(
@@ -59,6 +61,7 @@ describe('Media registration and ownership', () => {
       expiresAt: new Date(Date.now() + 60000),
     });
     repository.register.mockResolvedValue(row);
+    repository.prepareGarmentDelete.mockResolvedValue([input.imagekitFileId]);
     storage.get.mockResolvedValue({
       fileId: input.imagekitFileId,
       filePath: row.filePath,
@@ -90,6 +93,14 @@ describe('Media registration and ownership', () => {
       service.create('garment', userId, input),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(storage.get).not.toHaveBeenCalled();
+  });
+
+  it('keeps alpha in the main image and thumbnail of an AI concept', async () => {
+    repository.find.mockResolvedValue({ ...row, source: 'ai_concept' });
+    const result = await service.get('garment', userId, id);
+    expect(result).toHaveProperty('source', 'ai_concept');
+    expect(storage.url).toHaveBeenCalledWith(row.filePath, 1600, 'png');
+    expect(storage.url).toHaveBeenCalledWith(row.filePath, 400, 'png');
   });
 
   it.each([{ usedAt: new Date() }, { expiresAt: new Date(0) }])(

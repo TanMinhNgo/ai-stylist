@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { DatabaseModule } from '../database/database.module';
 import { QueueModule } from '../queue/queue.module';
-import { ImageStorageProvider } from '../uploads/image-storage.provider';
-import { ImageKitProvider } from '../uploads/imagekit.provider';
+import { ImageStorageModule } from '../uploads/image-storage.module';
+import { AssetModule } from '../garment-assets/asset.module';
 import { UploadsController } from '../uploads/uploads.controller';
 import { ModelPhotosController } from '../model-photos/model-photos.controller';
 import { GarmentsController } from '../garments/garments.controller';
@@ -17,14 +17,16 @@ import { AnalysisProcessor } from './analysis.processor';
   imports: [
     DatabaseModule,
     QueueModule,
+    ImageStorageModule,
+    AssetModule,
     BullModule.registerQueue({ name: 'analysis', prefix: 'stylist' }),
   ],
   controllers: [UploadsController, ModelPhotosController, GarmentsController],
+  exports: [ImageStorageModule, MediaRepository],
   providers: [
     MediaRepository,
     MediaService,
     AnalysisProcessor,
-    { provide: ImageStorageProvider, useClass: ImageKitProvider },
     { provide: VisionProvider, useClass: OpenAiVisionProvider },
   ],
 })

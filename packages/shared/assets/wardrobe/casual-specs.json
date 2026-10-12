@@ -1,0 +1,165 @@
+{
+  "basePrompt": "Use case: product-mockup. Generate ONE isolated photorealistic apparel/accessory PNG for an Expo mannequin dressing app, truly transparent alpha background. Natural worn volume on a completely invisible adult mannequin; no body, head, hands, skin, feet, hanger, stand, floor, shadow, environment, text, brand or logo. Orthographic straight FRONT view centered and fully visible, symmetric, neutral soft studio light, generous transparent padding. Clothes portrait 1024x1536, sleeves in narrow A pose 10 degrees from torso, item only. Shoes square 1024x1024: BOTH shoes side by side, symmetric, toes forward at camera, heels away, separated by narrow transparent gap, viewed from front with slight elevation so uppers visible; no feet or socks. Hats square, FRONT brim toward camera, no head. Exactly requested item/pair, no other clothing.",
+  "items": [
+    {
+      "id": "black-oversized-tee",
+      "label": "Áo thun đen oversized",
+      "type": "t_shirt",
+      "color": "#202124",
+      "fit": "oversized",
+      "sleeve": "short",
+      "length": "regular",
+      "description": "black heavyweight cotton oversized crew-neck T-shirt, dropped shoulders, clean hem"
+    },
+    {
+      "id": "navy-polo",
+      "label": "Polo navy",
+      "type": "polo",
+      "color": "#24364B",
+      "fit": "regular",
+      "sleeve": "short",
+      "length": "regular",
+      "description": "navy cotton pique short-sleeved polo shirt, two buttons, neat collar"
+    },
+    {
+      "id": "grey-hoodie",
+      "label": "Hoodie xám",
+      "type": "hoodie",
+      "color": "#979B9F",
+      "fit": "loose",
+      "sleeve": "long",
+      "length": "regular",
+      "description": "heather grey fleece pullover hoodie, hood resting behind neckline, kangaroo pocket, no drawstrings covering chest"
+    },
+    {
+      "id": "cream-sweater",
+      "label": "Sweater kem",
+      "type": "sweater",
+      "color": "#E7DDCA",
+      "fit": "regular",
+      "sleeve": "long",
+      "length": "regular",
+      "description": "cream cotton knit crew-neck sweatshirt sweater with ribbed hem and cuffs"
+    },
+    {
+      "id": "blue-denim-jacket",
+      "label": "Áo khoác denim",
+      "type": "jacket",
+      "color": "#567592",
+      "fit": "regular",
+      "sleeve": "long",
+      "length": "regular",
+      "description": "medium blue denim jacket with contrast seams and metal buttons, front fully open, transparent opening revealing the underlying layer, no back lining across open chest, no shirt"
+    },
+    {
+      "id": "khaki-shorts",
+      "label": "Short kaki",
+      "type": "shorts",
+      "color": "#BDA880",
+      "fit": "regular",
+      "sleeve": null,
+      "length": "short",
+      "description": "khaki cotton chino shorts, waist to just above knees, straight hems, no belt"
+    },
+    {
+      "id": "olive-cargo",
+      "label": "Cargo xanh olive",
+      "type": "trousers",
+      "color": "#59644B",
+      "fit": "loose",
+      "sleeve": null,
+      "length": "long",
+      "description": "olive green cotton cargo trousers, full length relaxed straight legs, two cargo side pockets, no belt or shoes"
+    },
+    {
+      "id": "black-joggers",
+      "label": "Jogger đen",
+      "type": "trousers",
+      "color": "#25272A",
+      "fit": "regular",
+      "sleeve": null,
+      "length": "long",
+      "description": "black fleece jogger trousers, full length tapered legs, elastic cuffs, drawstring waist"
+    },
+    {
+      "id": "white-sneakers",
+      "label": "Sneaker trắng",
+      "type": "sneakers",
+      "color": "#F4F3EF",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one matching pair of minimal white leather low-top sneakers, white laces and white rubber soles"
+    },
+    {
+      "id": "black-chunky-sneakers",
+      "label": "Sneaker đen đế dày",
+      "type": "sneakers",
+      "color": "#222428",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one matching pair of black mesh and suede chunky streetwear sneakers, thick black rubber soles"
+    },
+    {
+      "id": "color-sport-sneakers",
+      "label": "Sneaker thể thao phối màu",
+      "type": "sneakers",
+      "color": "#E1DFD6",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one matching pair of cream and grey running sneakers with sage green panels and small muted orange trim, mesh uppers"
+    },
+    {
+      "id": "brown-sandals",
+      "label": "Sandal nâu",
+      "type": "sandals",
+      "color": "#8B6041",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one matching pair of brown leather two-strap sandals, ankle straps, flat cork soles"
+    },
+    {
+      "id": "black-slides",
+      "label": "Dép slide đen",
+      "type": "other_shoes",
+      "color": "#252525",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one matching pair of black rubber slide sandals, single wide strap per shoe, anatomically shaped footbeds"
+    },
+    {
+      "id": "navy-cap",
+      "label": "Nón lưỡi trai navy",
+      "type": "cap",
+      "color": "#26374C",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one navy cotton six-panel baseball cap, gently curved brim facing straight toward camera"
+    },
+    {
+      "id": "cream-cap",
+      "label": "Nón lưỡi trai kem",
+      "type": "cap",
+      "color": "#E8DFC9",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one warm cream cotton baseball cap, softly structured crown, curved brim facing straight toward camera"
+    },
+    {
+      "id": "grey-beanie",
+      "label": "Beanie xám",
+      "type": "beanie",
+      "color": "#73797E",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one charcoal grey ribbed knit beanie, folded cuff, natural rounded shape as worn"
+    }
+  ]
+}

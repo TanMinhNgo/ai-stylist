@@ -27,7 +27,7 @@ test('pagination limits and cursors are constrained', () => {
 });
 test('registration needs an upload grant and cannot take userId from clients', () => {
   const input = { imagekitFileId: 'file', url: 'https://images.example.com/test.jpg', uploadToken: 'c582a2a0-9786-47b4-91a7-733d0f860e47' };
-  assert.deepEqual(CreateGarmentRequest.parse(input), input);
+  assert.deepEqual(CreateGarmentRequest.parse(input), { ...input, generateAsset: false, bodyKey: 'f' });
   assert.equal(CreateGarmentRequest.safeParse({ ...input, userId: 'attacker' }).success, false);
   assert.equal(CreateGarmentRequest.safeParse({ imagekitFileId: 'file', url: input.url }).success, false);
   assert.equal(UploadAuthResponse.safeParse({ token: input.uploadToken, expire: 1, signature: 's', publicKey: 'pk', urlEndpoint: 'https://images.example.com', folder: '/stylist/fixture', isPrivateFile: false }).success, false);

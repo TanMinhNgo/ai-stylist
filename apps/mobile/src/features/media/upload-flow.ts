@@ -7,13 +7,13 @@ import { uploadImage, uploadMessage } from '@/lib/upload';
 
 /**
  * resize → one-time grant (GET /uploads/auth) → ImageKit → POST /<kind>, parsed with `schema`.
- * Every step stops on `signal`; the grant is single-use, so retries start from the top.
+ * `extra` adds endpoint-specific fields (garments: generateAsset/bodyKey/requestedType). Every step stops on `signal`; the grant is single-use, so retries start from the top.
  */
 export async function uploadMedia<T>(
   kind: 'model-photos' | 'garments',
   schema: Schema<T>,
   image: LocalImage,
-  { onProgress, signal }: { onProgress?: (fraction: number) => void; signal?: AbortSignal } = {},
+  { onProgress, signal, extra }: { onProgress?: (fraction: number) => void; signal?: AbortSignal; extra?: Record<string, unknown> } = {},
 ): Promise<T> {
   const prepared = await prepareForUpload(image);
   const auth = await request(UploadAuthResponse, { url: '/uploads/auth', signal });
@@ -22,7 +22,7 @@ export async function uploadMedia<T>(
   return request(schema, {
     url: `/${kind}`,
     method: 'POST',
-    data: { imagekitFileId: file.fileId, url: file.url, uploadToken: auth.token },
+    data: { imagekitFileId: file.fileId, url: file.url, uploadToken: auth.token, ...extra },
     signal,
   });
 }

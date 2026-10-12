@@ -1,0 +1,185 @@
+{
+  "basePrompt": "Generate ONE isolated apparel/accessory asset for an Expo mannequin dressing app. Photorealistic premium product render, truly transparent alpha background, object has natural worn volume on a completely invisible mannequin, not a flat lay. No mannequin body, head, face, hands, skin, hanger, stand, text, logo, frame, environment, floor or ground shadow. Orthographic straight front view, centered and fully in frame, consistent soft neutral studio lighting only on the object. ONE requested item only, do not add any other garments. Clothing sleeves hang in a symmetrical narrow A pose with arms 10 degrees away from torso. Keep generous transparent padding. Clothes portrait 1024x1536; accessories/jewelry square 1024x1024. ",
+  "items": [
+    {
+      "id": "white-shirt",
+      "label": "Sơ mi trắng",
+      "type": "shirt",
+      "color": "#F4F3F0",
+      "fit": "regular",
+      "sleeve": "long",
+      "length": "regular",
+      "description": "a crisp white cotton long-sleeved point-collar shirt, subtle mother of pearl buttons, tailored regular fit"
+    },
+    {
+      "id": "white-tee",
+      "label": "Áo thun trắng",
+      "type": "t_shirt",
+      "color": "#F4F3F0",
+      "fit": "regular",
+      "sleeve": "short",
+      "length": "regular",
+      "description": "a premium white cotton crew-neck short sleeve T-shirt, clean regular fit, no logo"
+    },
+    {
+      "id": "champagne-blouse",
+      "label": "Blouse champagne",
+      "type": "blouse",
+      "color": "#E3D1B5",
+      "fit": "regular",
+      "sleeve": "long",
+      "length": "regular",
+      "description": "a women's champagne silk long sleeve V-neck blouse, soft elegant draping, no jewelry"
+    },
+    {
+      "id": "navy-blazer",
+      "label": "Blazer navy",
+      "type": "blazer",
+      "color": "#253858",
+      "fit": "regular",
+      "sleeve": "long",
+      "length": "regular",
+      "description": "a deep navy tailored wool two-button single-breasted blazer with notch lapels, front slightly open, jacket only, no shirt or tie"
+    },
+    {
+      "id": "navy-trousers",
+      "label": "Quần âu navy",
+      "type": "trousers",
+      "color": "#253858",
+      "fit": "regular",
+      "sleeve": null,
+      "length": "long",
+      "description": "a pair of deep navy tailored straight-leg wool trousers with front center creases, waistband to full hems, trousers only, no shoes"
+    },
+    {
+      "id": "blue-jeans",
+      "label": "Jeans xanh",
+      "type": "jeans",
+      "color": "#3E5A80",
+      "fit": "regular",
+      "sleeve": null,
+      "length": "long",
+      "description": "a pair of indigo blue straight-leg five-pocket denim jeans with realistic stitching, waistband to full hems, no shoes"
+    },
+    {
+      "id": "pleated-skirt",
+      "label": "Chân váy xếp ly",
+      "type": "midi_skirt",
+      "color": "#D9C7AE",
+      "fit": "regular",
+      "sleeve": null,
+      "length": "midi",
+      "description": "a warm beige midi-length finely pleated skirt with a neat waistband and natural full silhouette, skirt only"
+    },
+    {
+      "id": "black-midi-dress",
+      "label": "Đầm midi đen",
+      "type": "midi_dress",
+      "color": "#1E1E22",
+      "fit": "regular",
+      "sleeve": "sleeveless",
+      "length": "midi",
+      "description": "an elegant black sleeveless midi dress, modest round neckline and gently fitted waist with graceful A-line hem, dress only, no jewelry or shoes"
+    },
+    {
+      "id": "black-loafers",
+      "label": "Giày loafer đen",
+      "type": "loafers",
+      "color": "#1E1E22",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one matching pair of black polished leather loafers, viewed from slightly above and front, both shoes side by side, empty shoes, no legs or feet"
+    },
+    {
+      "id": "tan-crossbody",
+      "label": "Túi đeo chéo nâu",
+      "type": "crossbody",
+      "color": "#C69C6D",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one refined structured tan leather crossbody bag, complete long thin shoulder strap arranged upright in a narrow natural arc, small restrained gold clasp, straight front view"
+    },
+    {
+      "id": "beige-fedora",
+      "label": "Nón fedora be",
+      "type": "fedora",
+      "color": "#D9C7AE",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one classic beige wool felt fedora hat with a slim dark brown hatband, straight front view slightly from above, whole brim visible, no head"
+    },
+    {
+      "id": "black-belt",
+      "label": "Thắt lưng đen",
+      "type": "belt",
+      "color": "#1E1E22",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one black leather belt arranged as a shallow curved horizontal band shaped to wrap around a waist, restrained brushed silver rectangular buckle centered on front, no body"
+    },
+    {
+      "id": "gold-glasses",
+      "label": "Kính gọng vàng",
+      "type": "glasses",
+      "color": "#C9A44C",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one pair of elegant thin gold metal round eyeglasses, perfectly straight symmetrical front view with transparent clear lenses and no head"
+    },
+    {
+      "id": "burgundy-scarf",
+      "label": "Khăn lụa đỏ đô",
+      "type": "scarf",
+      "color": "#7A1F2B",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one burgundy silk scarf draped in a loose narrow neck loop with two short ends falling down, front view, no neck or person"
+    },
+    {
+      "id": "gold-necklace",
+      "label": "Dây chuyền vàng",
+      "type": "necklace",
+      "color": "#C9A44C",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one delicate fine gold necklace hanging in a symmetric U curve, tiny single gold pendant centered at bottom, front view, no neck or bust"
+    },
+    {
+      "id": "pearl-earrings",
+      "label": "Bông tai ngọc trai",
+      "type": "earrings",
+      "color": "#F4F1EA",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one matching pair of elegant small pearl drop earrings with delicate gold hooks, evenly spaced side by side, front view, no ears or person"
+    },
+    {
+      "id": "gold-bracelet",
+      "label": "Vòng tay vàng",
+      "type": "bracelet",
+      "color": "#C9A44C",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one refined thin polished gold oval bangle bracelet, near-front view with slight depth, no wrist, no hand"
+    },
+    {
+      "id": "silver-ring",
+      "label": "Nhẫn bạc",
+      "type": "ring",
+      "color": "#C0C0C0",
+      "fit": "regular",
+      "sleeve": null,
+      "length": null,
+      "description": "one refined polished silver band ring with a tiny clear gemstone, near-front view with subtle depth, no hand or finger"
+    }
+  ]
+}

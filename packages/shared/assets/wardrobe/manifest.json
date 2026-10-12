@@ -1,0 +1,2106 @@
+{
+  "version": 1,
+  "role": "generated-demo-catalog",
+  "items": [
+    {
+      "id": "white-shirt",
+      "label": "Sơ mi trắng",
+      "file": "white-shirt.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        41,
+        198,
+        943,
+        1117
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "top",
+        "type": "shirt",
+        "slot": "top",
+        "colors": [
+          "#F4F3F0"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "long",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "top",
+        "type": "shirt",
+        "slot": "top",
+        "colors": [
+          "#F4F3F0"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "long",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "white-tee",
+      "label": "Áo thun trắng",
+      "file": "white-tee.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        23,
+        274,
+        978,
+        1029
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "top",
+        "type": "t_shirt",
+        "slot": "top",
+        "colors": [
+          "#F4F3F0"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "short",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "top",
+        "type": "t_shirt",
+        "slot": "top",
+        "colors": [
+          "#F4F3F0"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "short",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "champagne-blouse",
+      "label": "Blouse champagne",
+      "file": "champagne-blouse.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        29,
+        233,
+        966,
+        1066
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "top",
+        "type": "blouse",
+        "slot": "top",
+        "colors": [
+          "#E3D1B5"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "long",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "top",
+        "type": "blouse",
+        "slot": "top",
+        "colors": [
+          "#E3D1B5"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "long",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "navy-blazer",
+      "label": "Blazer navy",
+      "file": "navy-blazer-overlay.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        14,
+        187,
+        997,
+        1112
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "outerwear",
+        "type": "blazer",
+        "slot": "outer",
+        "colors": [
+          "#253858"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "long",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "outerwear",
+        "type": "blazer",
+        "slot": "outer",
+        "colors": [
+          "#253858"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "long",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "navy-trousers",
+      "label": "Quần âu navy",
+      "file": "navy-trousers.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        292,
+        119,
+        442,
+        1316
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "pants",
+        "type": "trousers",
+        "slot": "bottom",
+        "colors": [
+          "#253858"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "long",
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "pants",
+        "type": "trousers",
+        "slot": "bottom",
+        "colors": [
+          "#253858"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "long",
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "blue-jeans",
+      "label": "Jeans xanh",
+      "file": "blue-jeans.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        259,
+        67,
+        507,
+        1401
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "pants",
+        "type": "jeans",
+        "slot": "bottom",
+        "colors": [
+          "#3E5A80"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "long",
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "pants",
+        "type": "jeans",
+        "slot": "bottom",
+        "colors": [
+          "#3E5A80"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "long",
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "pleated-skirt",
+      "label": "Chân váy xếp ly",
+      "file": "pleated-skirt.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        47,
+        152,
+        930,
+        1239
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "skirt",
+        "type": "midi_skirt",
+        "slot": "bottom",
+        "colors": [
+          "#D9C7AE"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "midi",
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "skirt",
+        "type": "midi_skirt",
+        "slot": "bottom",
+        "colors": [
+          "#D9C7AE"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "midi",
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "black-midi-dress",
+      "label": "Đầm midi đen",
+      "file": "black-midi-dress.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        126,
+        80,
+        772,
+        1378
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "dress",
+        "type": "midi_dress",
+        "slot": "dress",
+        "colors": [
+          "#1E1E22"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "midi",
+        "sleeve": "sleeveless",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "dress",
+        "type": "midi_dress",
+        "slot": "dress",
+        "colors": [
+          "#1E1E22"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "midi",
+        "sleeve": "sleeveless",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "black-loafers",
+      "label": "Giày loafer đen",
+      "file": "black-loafers.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        68,
+        328,
+        889,
+        892
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "shoes",
+        "type": "loafers",
+        "slot": "shoes",
+        "colors": [
+          "#1E1E22"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "shoes",
+        "type": "loafers",
+        "slot": "shoes",
+        "colors": [
+          "#1E1E22"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "tan-crossbody",
+      "label": "Túi đeo chéo nâu",
+      "file": "tan-crossbody.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        159,
+        65,
+        706,
+        1332
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "bag",
+        "type": "crossbody",
+        "slot": "bag",
+        "colors": [
+          "#C69C6D"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "bag",
+        "type": "crossbody",
+        "slot": "bag",
+        "colors": [
+          "#C69C6D"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "beige-fedora",
+      "label": "Nón fedora be",
+      "file": "beige-fedora.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        33,
+        432,
+        958,
+        674
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "accessory",
+        "type": "fedora",
+        "slot": "hat",
+        "colors": [
+          "#D9C7AE"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "accessory",
+        "type": "fedora",
+        "slot": "hat",
+        "colors": [
+          "#D9C7AE"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "black-belt",
+      "label": "Thắt lưng đen",
+      "file": "black-belt.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        35,
+        630,
+        955,
+        284
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "accessory",
+        "type": "belt",
+        "slot": "belt",
+        "colors": [
+          "#1E1E22"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "accessory",
+        "type": "belt",
+        "slot": "belt",
+        "colors": [
+          "#1E1E22"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "gold-glasses",
+      "label": "Kính gọng vàng",
+      "file": "gold-glasses.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        33,
+        588,
+        959,
+        354
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "accessory",
+        "type": "glasses",
+        "slot": "eyewear",
+        "colors": [
+          "#C9A44C"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "accessory",
+        "type": "glasses",
+        "slot": "eyewear",
+        "colors": [
+          "#C9A44C"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "burgundy-scarf",
+      "label": "Khăn lụa đỏ đô",
+      "file": "burgundy-scarf.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        100,
+        139,
+        827,
+        1249
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "accessory",
+        "type": "scarf",
+        "slot": "neck",
+        "colors": [
+          "#7A1F2B"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "accessory",
+        "type": "scarf",
+        "slot": "neck",
+        "colors": [
+          "#7A1F2B"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "gold-necklace",
+      "label": "Dây chuyền vàng",
+      "file": "gold-necklace.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        73,
+        117,
+        878,
+        1235
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "accessory",
+        "type": "necklace",
+        "slot": "jewelry",
+        "colors": [
+          "#C9A44C"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "accessory",
+        "type": "necklace",
+        "slot": "jewelry",
+        "colors": [
+          "#C9A44C"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "pearl-earrings",
+      "label": "Bông tai ngọc trai",
+      "file": "pearl-earrings.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1234,
+      "height": 1275,
+      "bounds": [
+        310,
+        261,
+        614,
+        757
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "accessory",
+        "type": "earrings",
+        "slot": "jewelry",
+        "colors": [
+          "#F4F1EA"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "accessory",
+        "type": "earrings",
+        "slot": "jewelry",
+        "colors": [
+          "#F4F1EA"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "gold-bracelet",
+      "label": "Vòng tay vàng",
+      "file": "gold-bracelet.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1254,
+      "height": 1254,
+      "bounds": [
+        60,
+        471,
+        1135,
+        326
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "accessory",
+        "type": "bracelet",
+        "slot": "jewelry",
+        "colors": [
+          "#C9A44C"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "accessory",
+        "type": "bracelet",
+        "slot": "jewelry",
+        "colors": [
+          "#C9A44C"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "silver-ring",
+      "label": "Nhẫn bạc",
+      "file": "silver-ring.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1230,
+      "height": 1278,
+      "bounds": [
+        131,
+        459,
+        968,
+        375
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "accessory",
+        "type": "ring",
+        "slot": "jewelry",
+        "colors": [
+          "#C0C0C0"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      },
+      "tags": {
+        "category": "accessory",
+        "type": "ring",
+        "slot": "jewelry",
+        "colors": [
+          "#C0C0C0"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 3,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": []
+      }
+    },
+    {
+      "id": "black-oversized-tee",
+      "label": "Áo thun đen oversized",
+      "file": "black-oversized-tee.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        11,
+        252,
+        1003,
+        1030
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "top",
+        "type": "t_shirt",
+        "slot": "top",
+        "colors": [
+          "#202124"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "oversized",
+        "length": "regular",
+        "sleeve": "short",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "top",
+        "type": "t_shirt",
+        "slot": "top",
+        "colors": [
+          "#202124"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "oversized",
+        "length": "regular",
+        "sleeve": "short",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "navy-polo",
+      "label": "Polo navy",
+      "file": "navy-polo.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        9,
+        193,
+        1006,
+        1140
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "top",
+        "type": "polo",
+        "slot": "top",
+        "colors": [
+          "#24364B"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "short",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "top",
+        "type": "polo",
+        "slot": "top",
+        "colors": [
+          "#24364B"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "short",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "grey-hoodie",
+      "label": "Hoodie xám",
+      "file": "grey-hoodie.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        12,
+        178,
+        999,
+        1104
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "top",
+        "type": "hoodie",
+        "slot": "top",
+        "colors": [
+          "#979B9F"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "loose",
+        "length": "regular",
+        "sleeve": "long",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "top",
+        "type": "hoodie",
+        "slot": "top",
+        "colors": [
+          "#979B9F"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "loose",
+        "length": "regular",
+        "sleeve": "long",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "cream-sweater",
+      "label": "Sweater kem",
+      "file": "cream-sweater.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        20,
+        245,
+        986,
+        1013
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "top",
+        "type": "sweater",
+        "slot": "top",
+        "colors": [
+          "#E7DDCA"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "long",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "top",
+        "type": "sweater",
+        "slot": "top",
+        "colors": [
+          "#E7DDCA"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "long",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "blue-denim-jacket",
+      "label": "Áo khoác denim",
+      "file": "blue-denim-jacket-overlay.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        12,
+        211,
+        1001,
+        1052
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "outerwear",
+        "type": "jacket",
+        "slot": "outer",
+        "colors": [
+          "#567592"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "long",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "outerwear",
+        "type": "jacket",
+        "slot": "outer",
+        "colors": [
+          "#567592"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "regular",
+        "sleeve": "long",
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "khaki-shorts",
+      "label": "Short kaki",
+      "file": "khaki-shorts.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        62,
+        287,
+        900,
+        940
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "pants",
+        "type": "shorts",
+        "slot": "bottom",
+        "colors": [
+          "#BDA880"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "short",
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "pants",
+        "type": "shorts",
+        "slot": "bottom",
+        "colors": [
+          "#BDA880"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "short",
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "olive-cargo",
+      "label": "Cargo xanh olive",
+      "file": "olive-cargo.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        227,
+        59,
+        571,
+        1413
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "pants",
+        "type": "trousers",
+        "slot": "bottom",
+        "colors": [
+          "#59644B"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "loose",
+        "length": "long",
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "pants",
+        "type": "trousers",
+        "slot": "bottom",
+        "colors": [
+          "#59644B"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "loose",
+        "length": "long",
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "black-joggers",
+      "label": "Jogger đen",
+      "file": "black-joggers.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1024,
+      "height": 1536,
+      "bounds": [
+        223,
+        47,
+        579,
+        1421
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "pants",
+        "type": "trousers",
+        "slot": "bottom",
+        "colors": [
+          "#25272A"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "long",
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "pants",
+        "type": "trousers",
+        "slot": "bottom",
+        "colors": [
+          "#25272A"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": "long",
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "white-sneakers",
+      "label": "Sneaker trắng",
+      "file": "white-sneakers.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1254,
+      "height": 1254,
+      "bounds": [
+        75,
+        236,
+        1104,
+        842
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "shoes",
+        "type": "sneakers",
+        "slot": "shoes",
+        "colors": [
+          "#F4F3EF"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "shoes",
+        "type": "sneakers",
+        "slot": "shoes",
+        "colors": [
+          "#F4F3EF"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "black-chunky-sneakers",
+      "label": "Sneaker đen đế dày",
+      "file": "black-chunky-sneakers.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1254,
+      "height": 1254,
+      "bounds": [
+        22,
+        156,
+        1216,
+        910
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "shoes",
+        "type": "sneakers",
+        "slot": "shoes",
+        "colors": [
+          "#222428"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "shoes",
+        "type": "sneakers",
+        "slot": "shoes",
+        "colors": [
+          "#222428"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "color-sport-sneakers",
+      "label": "Sneaker thể thao phối màu",
+      "file": "color-sport-sneakers.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1254,
+      "height": 1254,
+      "bounds": [
+        18,
+        190,
+        1219,
+        888
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "shoes",
+        "type": "sneakers",
+        "slot": "shoes",
+        "colors": [
+          "#E1DFD6"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "shoes",
+        "type": "sneakers",
+        "slot": "shoes",
+        "colors": [
+          "#E1DFD6"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "brown-sandals",
+      "label": "Sandal nâu",
+      "file": "brown-sandals.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1254,
+      "height": 1254,
+      "bounds": [
+        42,
+        138,
+        1171,
+        950
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "shoes",
+        "type": "sandals",
+        "slot": "shoes",
+        "colors": [
+          "#8B6041"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "shoes",
+        "type": "sandals",
+        "slot": "shoes",
+        "colors": [
+          "#8B6041"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "black-slides",
+      "label": "Dép slide đen",
+      "file": "black-slides.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1254,
+      "height": 1254,
+      "bounds": [
+        43,
+        232,
+        1168,
+        820
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "shoes",
+        "type": "other_shoes",
+        "slot": "shoes",
+        "colors": [
+          "#252525"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "shoes",
+        "type": "other_shoes",
+        "slot": "shoes",
+        "colors": [
+          "#252525"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "navy-cap",
+      "label": "Nón lưỡi trai navy",
+      "file": "navy-cap.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1254,
+      "height": 1254,
+      "bounds": [
+        113,
+        172,
+        1028,
+        919
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "accessory",
+        "type": "cap",
+        "slot": "hat",
+        "colors": [
+          "#26374C"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "accessory",
+        "type": "cap",
+        "slot": "hat",
+        "colors": [
+          "#26374C"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "cream-cap",
+      "label": "Nón lưỡi trai kem",
+      "file": "cream-cap.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1254,
+      "height": 1254,
+      "bounds": [
+        83,
+        122,
+        1088,
+        996
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "accessory",
+        "type": "cap",
+        "slot": "hat",
+        "colors": [
+          "#E8DFC9"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "accessory",
+        "type": "cap",
+        "slot": "hat",
+        "colors": [
+          "#E8DFC9"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    },
+    {
+      "id": "grey-beanie",
+      "label": "Beanie xám",
+      "file": "grey-beanie.png",
+      "bodyKeys": [
+        "m",
+        "f"
+      ],
+      "width": 1254,
+      "height": 1254,
+      "bounds": [
+        82,
+        164,
+        1091,
+        952
+      ],
+      "demoOnly": true,
+      "lookTags": {
+        "category": "accessory",
+        "type": "beanie",
+        "slot": "hat",
+        "colors": [
+          "#73797E"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      },
+      "tags": {
+        "category": "accessory",
+        "type": "beanie",
+        "slot": "hat",
+        "colors": [
+          "#73797E"
+        ],
+        "material": "mẫu thiết kế",
+        "formality": 1,
+        "pattern": "solid",
+        "fit": "regular",
+        "length": null,
+        "sleeve": null,
+        "neckline": null,
+        "rise": null,
+        "season": [
+          "all"
+        ],
+        "occasions": [
+          "đi học",
+          "đi chơi",
+          "thường ngày"
+        ]
+      }
+    }
+  ]
+}

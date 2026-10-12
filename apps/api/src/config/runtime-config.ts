@@ -12,6 +12,11 @@ const schema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_VISION_MODEL: z.string().optional(),
   OPENAI_EMBEDDING_MODEL: z.string().optional(),
+  OPENAI_IMAGE_MODEL: z.string().optional(),
+  TRYON_PROVIDER: z.enum(['openai', 'fake']).default('openai'),
+  ASSET_PROVIDER: z.enum(['openai', 'fake']).default('openai'),
+  ASSET_GENERATION_ENABLED: z.enum(['true', 'false']).default('false'),
+  ASSET_GENERATION_USER_IDS: z.string().default(''),
 });
 
 @Injectable()
@@ -30,6 +35,12 @@ export class RuntimeConfig {
       );
     }
     this.values = result.data;
+    if (
+      process.env.NODE_ENV === 'production' &&
+      (this.values.TRYON_PROVIDER === 'fake' ||
+        this.values.ASSET_PROVIDER === 'fake')
+    )
+      throw new Error('Fake try-on provider is disabled in production');
     this.authorizedParties = (process.env.CLERK_AUTHORIZED_PARTIES ?? '')
       .split(',')
       .map((origin) => origin.trim())

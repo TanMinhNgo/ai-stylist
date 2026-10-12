@@ -32,9 +32,10 @@ export default function WardrobeScreen() {
   }
 
   const addMenu = () =>
-    Alert.alert('Thêm món đồ', 'Chụp từng món trên nền gọn, đủ sáng để AI gắn tag chính xác.', [
-      { text: 'Chụp ảnh', onPress: () => choose(true) },
-      { text: 'Chọn từ thư viện', onPress: () => choose(false) },
+    Alert.alert('Thêm món đồ', 'Tạo món có hình cho ma nơ canh (từ ảnh hoặc ý tưởng), hoặc thêm nhanh nhiều ảnh chỉ để gắn tag.', [
+      { text: 'Thêm món & tạo hình', onPress: () => router.push('/add-garment') },
+      { text: 'Thêm nhanh: chụp ảnh', onPress: () => choose(true) },
+      { text: 'Thêm nhanh: thư viện', onPress: () => choose(false) },
       { text: 'Hủy', style: 'cancel' },
     ]);
 
@@ -116,6 +117,14 @@ function GarmentCard({ garment }: { garment: Garment }) {
             <Icon ios="exclamationmark.circle.fill" android="error" size={14} color={colors.danger} />
             <Text variant="caption" color={colors.danger} style={{ fontWeight: '600' }}>Lỗi</Text>
           </View>
+        ) : (
+          <AssetBadge garment={garment} />
+        )}
+        {garment.source === 'ai_concept' ? (
+          <View style={[styles.badge, styles.topBadge, { backgroundColor: colors.accentSoft }]}>
+            <Icon ios="sparkles" android="auto_awesome" size={12} color={colors.accent} />
+            <Text variant="caption" color={colors.accent} style={{ fontWeight: '600' }}>AI concept</Text>
+          </View>
         ) : null}
       </View>
       <View style={{ padding: space.md, gap: 2 }}>
@@ -123,6 +132,27 @@ function GarmentCard({ garment }: { garment: Garment }) {
         <Text variant="caption" color={colors.inkSecondary} numberOfLines={2}>{detail}</Text>
       </View>
     </Pressable>
+  );
+}
+
+/** Mannequin PNG state; analysis ('Đang phân tích…') is shown separately above. */
+function AssetBadge({ garment }: { garment: Garment }) {
+  const job = garment.assetJob?.status;
+  const [label, color] = garment.mannequinAsset
+    ? ['Có hình ma nơ canh', colors.success]
+    : job === 'queued' || job === 'processing'
+      ? ['Đang tạo hình…', colors.ink]
+      : job === 'deferred'
+        ? ['Chờ lượt tạo hình', colors.warning]
+        : job === 'failed'
+          ? ['Tạo hình lỗi', colors.danger]
+          : [null, null];
+  if (!label) return null;
+  return (
+    <Glass style={styles.badge}>
+      {job === 'queued' || job === 'processing' ? <ActivityIndicator size="small" color={colors.ink} /> : null}
+      <Text variant="caption" color={color!} style={{ fontWeight: '600' }}>{label}</Text>
+    </Glass>
   );
 }
 
@@ -161,6 +191,7 @@ const styles = StyleSheet.create({
   card: { flex: 1, maxWidth: '50%', borderRadius: radius.lg - 2, backgroundColor: colors.surface, overflow: 'hidden' },
   thumb: { height: 180, backgroundColor: '#ECE9E4' },
   badge: { position: 'absolute', left: 8, bottom: 8, height: 28, paddingHorizontal: 10, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  topBadge: { top: 8, bottom: undefined },
   banner: { borderRadius: radius.md, backgroundColor: colors.surface, padding: space.md, gap: space.sm },
   track: { height: 6, borderRadius: 3, backgroundColor: colors.fill, overflow: 'hidden' },
   fill: { height: 6, borderRadius: 3, backgroundColor: colors.accent },

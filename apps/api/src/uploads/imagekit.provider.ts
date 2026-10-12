@@ -41,13 +41,13 @@ export class ImageKitProvider extends ImageStorageProvider {
     };
   }
 
-  url(filePath: string, width: number) {
+  url(filePath: string, width: number, format: 'jpg' | 'png' = 'jpg') {
     const urlEndpoint = this.config.values.IMAGEKIT_URL_ENDPOINT;
     if (!urlEndpoint) throw new ServiceUnavailableException();
     return this.client.helper.buildSrc({
       urlEndpoint,
       src: filePath,
-      transformation: [{ width, format: 'jpg' }],
+      transformation: [{ width, format }],
       signed: true,
       expiresIn: 900,
     });
@@ -60,5 +60,20 @@ export class ImageKitProvider extends ImageStorageProvider {
       if (!(error instanceof ImageKit.APIError) || error.status !== 404)
         throw new Error('Image deletion failed');
     }
+  }
+
+  async saveResult(image: Buffer, userId: string, jobId: string) {
+    const file = await this.client.files.upload({
+      file: image.toString('base64'),
+      fileName: `${jobId}.png`,
+      folder: `/stylist/${userId}/results`,
+      isPrivateFile: true,
+      useUniqueFileName: false,
+      overwriteFile: false,
+      responseFields: ['isPrivateFile'],
+    });
+    if (!file.fileId || !file.filePath || file.isPrivateFile !== true)
+      throw new Error('Invalid result upload');
+    return { fileId: file.fileId, filePath: file.filePath };
   }
 }

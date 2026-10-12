@@ -8,9 +8,16 @@ import { AuthModule } from './auth/auth.module';
 import { QueueModule } from './queue/queue.module';
 import { RequestLogMiddleware } from './common/request-log.middleware';
 import { MediaModule } from './media/media.module';
+import { TryOnModule } from './try-on/try-on.module';
 
 @Module({
-  imports: [RuntimeConfigModule, AuthModule, QueueModule, MediaModule],
+  imports: [
+    RuntimeConfigModule,
+    AuthModule,
+    QueueModule,
+    MediaModule,
+    TryOnModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,

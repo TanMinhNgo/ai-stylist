@@ -1,4 +1,4 @@
-import { DeleteMediaResponse, Garment, GarmentListResponse, type GarmentCategory } from '@stylist/shared';
+import { DeleteMediaResponse, Garment, GarmentListResponse, type CreateGarmentRequest, type GarmentCategory } from '@stylist/shared';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 
@@ -25,7 +25,7 @@ export function useGarment(id: string) {
   return useQuery({
     queryKey: [...KEY, 'one', id],
     queryFn: () => request(Garment, { url: `/garments/${id}` }),
-    refetchInterval: (q) => (q.state.data?.status === 'pending' && q.state.dataUpdateCount < MAX_POLLS ? 3000 : false),
+    refetchInterval: (q) => (hasPending(q.state.data ? [q.state.data] : undefined) && q.state.dataUpdateCount < MAX_POLLS ? 3000 : false),
   });
 }
 
@@ -65,6 +65,20 @@ export function useAddGarments() {
   }
 
   return { state, add, cancel: () => abort.current?.abort(), dismiss: () => setState(null) };
+}
+
+type UploadOne = { image: LocalImage; extra: Pick<CreateGarmentRequest, 'generateAsset' | 'bodyKey' | 'requestedType'>; signal: AbortSignal; onProgress: (f: number) => void };
+
+/** One cropped garment photo; with generateAsset the API makes its mannequin PNG after analysis (or defers it without quota). */
+export function useUploadGarment() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ image, extra, signal, onProgress }: UploadOne) => uploadMedia('garments', Garment, image, { extra, signal, onProgress }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: [...KEY, 'list'] });
+      void client.invalidateQueries({ queryKey: ['asset-quota'] });
+    },
+  });
 }
 
 /** Optimistic delete: the item disappears from every list at once and comes back if the API refuses. */

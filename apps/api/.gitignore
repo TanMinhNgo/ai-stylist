@@ -56,3 +56,6 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # Generated Prisma client is recreated during build/dev.
 /src/generated/
+
+# Local validation reports and generated smoke images.
+.artifacts/

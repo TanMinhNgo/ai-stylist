@@ -1,3 +1,5 @@
+import { AssetProcessor } from '../src/garment-assets/asset.processor';
+import { TryOnProcessor } from '../src/try-on/try-on.processor';
 import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { getQueueToken } from '@nestjs/bullmq';
@@ -86,6 +88,14 @@ describe('Wardrobe endpoints (HTTP)', () => {
       .overrideProvider(getQueueToken('analysis'))
       .useValue(queue)
       .overrideProvider(AnalysisProcessor)
+      .useValue({})
+      .overrideProvider(getQueueToken('try-on'))
+      .useValue({ add: jest.fn() })
+      .overrideProvider(TryOnProcessor)
+      .useValue({})
+      .overrideProvider(getQueueToken('garment-assets'))
+      .useValue({ add: jest.fn() })
+      .overrideProvider(AssetProcessor)
       .useValue({})
       .compile();
     app = module.createNestApplication();

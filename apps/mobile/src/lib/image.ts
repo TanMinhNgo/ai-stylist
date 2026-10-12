@@ -17,6 +17,13 @@ export async function prepareForUpload(image: LocalImage): Promise<LocalImage> {
   return { uri: saved.uri, width: saved.width, height: saved.height };
 }
 
+/** Cut one garment out of a photo; `rect` is in image pixels and must already be inside the image (clampCrop). */
+export async function cropImage(image: LocalImage, rect: { x: number; y: number; width: number; height: number }): Promise<LocalImage> {
+  const rendered = await ImageManipulator.manipulate(image.uri).crop({ originX: rect.x, originY: rect.y, width: rect.width, height: rect.height }).renderAsync();
+  const saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.9 });
+  return { uri: saved.uri, width: saved.width, height: saved.height };
+}
+
 export type PickResult = { images: LocalImage[] } | { denied: true };
 
 /** Camera asks permission at the moment it is needed; the system photo picker needs none. */

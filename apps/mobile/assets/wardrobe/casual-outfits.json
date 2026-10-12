@@ -1,0 +1,44 @@
+{
+  "items": [
+    {
+      "id": "casual-basic",
+      "label": "Basic",
+      "itemIds": [
+        "white-tee",
+        "blue-jeans",
+        "white-sneakers",
+        "navy-cap"
+      ]
+    },
+    {
+      "id": "casual-school",
+      "label": "Đi học",
+      "itemIds": [
+        "navy-polo",
+        "khaki-shorts",
+        "white-sneakers",
+        "cream-cap"
+      ]
+    },
+    {
+      "id": "casual-street",
+      "label": "Streetwear",
+      "itemIds": [
+        "grey-hoodie",
+        "olive-cargo",
+        "black-chunky-sneakers",
+        "grey-beanie"
+      ]
+    },
+    {
+      "id": "casual-weekend",
+      "label": "Cuối tuần",
+      "itemIds": [
+        "black-oversized-tee",
+        "khaki-shorts",
+        "brown-sandals",
+        "cream-cap"
+      ]
+    }
+  ]
+}
