@@ -4,7 +4,8 @@ import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-
 import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
-import { AppState } from 'react-native';
+import { AppState, View } from 'react-native';
+import { Connectivity } from '@/components/Connectivity';
 
 import { useStudio } from '@/features/studio/store';
 import { useOnboardingHydrated, useOnboardingSkip, useStyleProfile } from '@/features/stylist/hooks';
@@ -39,7 +40,7 @@ export default function RootLayout() {
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <QueryClientProvider client={queryClient}>
         <StatusBar style="dark" />
-        <RootStack />
+        <View style={{ flex: 1 }}><Connectivity /><RootStack /></View>
       </QueryClientProvider>
     </ClerkProvider>
   );
@@ -70,6 +71,9 @@ function RootStack() {
           <Stack.Screen name="style-profile" />
           <Stack.Screen name="onboarding" options={{ presentation: 'modal', gestureEnabled: false }} />
           <Stack.Screen name="suggest" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="quota" />
+          <Stack.Screen name="delete-account" />
+          <Stack.Screen name="legal" />
         </Stack.Protected>
         <Stack.Protected guard={!isSignedIn}>
           <Stack.Screen name="(auth)" />

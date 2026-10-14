@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FLOATING_TAB_BAR_SPACE } from '@/components/tabs';
@@ -16,6 +16,9 @@ import { garmentWearable, pickKey, stagePlan, type Wearable } from '@/features/s
 import { useStudio } from '@/features/studio/store';
 import { newIdempotencyKey, useCreateTryOn, useTryOnJob } from '@/features/try-on/hooks';
 import { messageFor } from '@/lib/errors';
+import { useUsage } from '@/features/usage/hooks';
+import { usageBlocked } from '@/features/usage/logic';
+import { UsageNotice } from '@/features/usage/UsageNotice';
 import { colors, radius, space, type } from '@/theme';
 
 const TRY_ON_MAX = 4;
@@ -35,6 +38,7 @@ const DEMO_TABS = [{ label: 'Bộ phối sẵn', slots: [] as GarmentSlot[] }, .
 
 export default function StudioScreen() {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const client = useQueryClient();
   const { body, picks, preset, occasion, setBody, toggle, wearOutfit, setOccasion } = useStudio();
   const [demo, setDemo] = useState(false);
@@ -69,10 +73,12 @@ export default function StudioScreen() {
   const bottomSpace = Platform.OS === 'ios' ? space.sm : insets.bottom + FLOATING_TAB_BAR_SPACE;
 
   const create = useCreateTryOn();
+  const usage = useUsage();
   const activeJob = useStudio((s) => s.activeJob);
   const setActiveJob = useStudio((s) => s.setActiveJob);
   function tryOn() {
     if (!modelPhoto) return router.push('/photo-guide');
+    if (usageBlocked(usage.data)) return;
     const input = { modelPhotoId: modelPhoto.id, garmentIds: forTryOn.map((w) => w.garmentId!), occasion: occasion.trim() };
     // One key per tap: retries of this tap reuse it, a later tap is a new try-on.
     create.mutate(
@@ -107,7 +113,7 @@ export default function StudioScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.stage}>
+        <View style={[styles.stage, height < 740 && { minHeight: 120 }]}>
           <Mannequin3D
             body={body}
             picks={picks}
@@ -133,6 +139,7 @@ export default function StudioScreen() {
         </View>
 
         <Glass style={[styles.sheet, { marginBottom: bottomSpace }]}>
+          <ScrollView nestedScrollEnabled style={{ maxHeight: height * 0.42 }} contentContainerStyle={{ gap: space.md }} keyboardShouldPersistTaps="handled">
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={{ flex: 1 }}>
               <Text variant="headline">Đang mặc {worn.length} món</Text>
@@ -248,15 +255,17 @@ export default function StudioScreen() {
             />
           ) : null}
 
+          <UsageNotice compact />
           {activeJob ? <ActiveJobBanner id={activeJob.id} /> : null}
           <Button
             label={modelPhoto ? 'Thử lên ảnh của tôi' : 'Thêm ảnh người mẫu để thử'}
             onPress={tryOn}
             loading={create.isPending}
-            disabled={!!modelPhoto && (forTryOn.length === 0 || tooMany || !occasion.trim())}
+            disabled={!!modelPhoto && (forTryOn.length === 0 || tooMany || !occasion.trim() || usageBlocked(usage.data))}
             icon={<Icon ios="sparkles" android="auto_awesome" size={18} color="#FFFFFF" />}
           />
           {create.isError ? <Text variant="caption" color={colors.danger} style={{ textAlign: 'center' }}>{messageFor(create.error)}</Text> : null}
+          </ScrollView>
         </Glass>
       </View>
     </TabScreenFrame>

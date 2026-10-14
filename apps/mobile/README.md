@@ -1,56 +1,25 @@
-# Welcome to your Expo app 👋
+# AI Stylist mobile · Expo SDK57
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Chạy từ repo root: `npm install`, rồi `npm run dev`. Launcher chờ API healthy và tự lấy IP LAN Wi-Fi hiện tại cho Expo; điện thoại và máy chạy API phải cùng mạng. Không hard-code IP hoặc dùng localhost trên điện thoại. Mobile chỉ chứa public Clerk/ImageKit config, không chứa backend secrets.
 
-## Get started
+## Kiểm tra local
 
-1. Install dependencies
+`npm run test --workspace mobile`, `npm run lint --workspace mobile`; trong apps/mobile chạy `npx expo export --platform ios --platform android --output-dir dist/phase05`. Export tạo bundle để kiểm tra, không phải file cài đặt.
 
-   ```bash
-   npm install
-   ```
+## Hạn mức và xóa tài khoản
 
-2. Start the app
+Studio/Hồ sơ đọc GET /usage. Chỉ thử đồ trừ lượt tháng UTC; PNG quota ngày riêng. Sau tạo/fail và khi app foreground, mobile làm mới usage. 429 không tự gửi lại liên tục. Không có giá, checkout hoặc mua gói trong app.
 
-   ```bash
-   npx expo start
-   ```
+Xóa tài khoản cần hai xác nhận, lần hai nhập XÓA. Chỉ đăng xuất khi nhận receipt từ DELETE /me; lỗi mạng có thể thử lại DELETE (server trả cùng deletionId) hoặc kiểm tra GET /me/deletion. Receipt là yêu cầu đã nhận, purge nền có thể mất12–20phút hoặc lâu hơn. Sau Clerk revoke, trạng thái có thể401; worker vẫn tiếp tục. Trang legal là bản dự thảo, chưa phê duyệt.
 
-In the output, you'll find options to open the app in a
+## EAS development và preview
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Đã có eas.json và expo-dev-client. `npm run dev` / `npm start` vẫn mở bằng Expo Go (`expo start --go`); khi đã cài development build thì chạy `npm run start:dev-client`. Chưa tạo/ghép Expo cloud project, chưa build hoặc publish. Người sở hữu cần tài khoản Expo và quyền dự án; iOS physical-device internal build cần Apple Developer và đăng ký thiết bị.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+1. Trong apps/mobile, người sở hữu chạy `npx eas-cli@latest login`, rồi `npx eas-cli@latest init` để ghép đúng dự án. Lệnh này thêm projectId thật; không dùng UUID giả.
+2. Chốt `ios.bundleIdentifier`, `android.package` và owner theo tài khoản thực tế. Hiện identifier còn thiếu để tránh mạo danh namespace.
+3. Cấu hình EAS environment development/preview với EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY, EXPO_PUBLIC_API_URL (HTTPS API thật điện thoại truy cập được), EXPO_PUBLIC_IMAGEKIT_PUBLIC_KEY, EXPO_PUBLIC_IMAGEKIT_URL_ENDPOINT. Không dùng localhost/IP LAN cố định cho preview phát cho người khác.
+4. Khi đã chuẩn bị xong: `npx eas-cli@latest build --profile development --platform android` hoặc `npx eas-cli@latest build --profile preview --platform android`; preview tạo APK internal. iOS thay `--platform ios` và cấp provisioning đúng thiết bị.
+5. Cài artifact từ EAS lên điện thoại, nghiệm thu đăng nhập, quota0/tháng mới, mất mạng/kết nối lại, chữ lớn, màn hình nhỏ, xóa tài khoản, share chooser. Chỉ lúc đó mới coi preview cài được.
 
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Icon/splash/tên app và mô tả quyền camera/ảnh tiếng Việt hiện có trong app.json. Chưa có URL điều khoản/contact pháp lý thật hoặc Store approval. Không chạy EAS build/update/submit tự động.

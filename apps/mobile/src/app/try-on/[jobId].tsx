@@ -13,6 +13,8 @@ import { useOutfit, useSaveOutfit } from '@/features/stylist/hooks';
 import { adviceWorking } from '@/features/stylist/logic';
 import { newIdempotencyKey, useCreateTryOn, useTryOnJob } from '@/features/try-on/hooks';
 import { messageFor, RequestError } from '@/lib/errors';
+import { useUsage } from '@/features/usage/hooks';
+import { usageBlocked } from '@/features/usage/logic';
 import { colors, radius, space } from '@/theme';
 
 const STEPS = ['Đã nhận yêu cầu', 'Đang mặc đồ lên ảnh của bạn', 'Hoàn tất ảnh thử đồ'];
@@ -24,6 +26,7 @@ export default function TryOnScreen() {
   const activeJob = useStudio((s) => s.activeJob);
   const setActiveJob = useStudio((s) => s.setActiveJob);
   const create = useCreateTryOn();
+  const usage = useUsage();
   const photos = useModelPhotos();
   const [view, setView] = useState<'after' | 'before'>('after');
 
@@ -36,6 +39,7 @@ export default function TryOnScreen() {
   // "Tạo lại" is a new action: new idempotency key, same model photo, garments and occasion.
   const again = () => {
     if (!inputs) return router.back();
+    if (usageBlocked(usage.data)) return router.push('/quota');
     const { modelPhotoId, garmentIds, occasion } = inputs;
     create.mutate(
       { input: { modelPhotoId, garmentIds, occasion }, key: newIdempotencyKey() },
@@ -50,7 +54,7 @@ export default function TryOnScreen() {
 
   const actions = (
     <View style={{ flexDirection: 'row', gap: space.sm }}>
-      <Button label="Tạo lại" variant="plain" onPress={again} loading={create.isPending} disabled={!inputs} style={{ flex: 1 }} />
+      <Button label="Tạo lại" variant="plain" onPress={again} loading={create.isPending} disabled={!inputs || usageBlocked(usage.data)} style={{ flex: 1 }} />
       <Button label="Thử đồ khác" onPress={() => router.back()} style={{ flex: 1 }} />
     </View>
   );
@@ -115,7 +119,8 @@ export default function TryOnScreen() {
           <Text variant="callout" color="#4A4A52" style={styles.center}>{messageFor(new RequestError(data.errorCode ?? 'TRYON_PROVIDER_ERROR'))}</Text>
           {create.isError ? <Text variant="footnote" color={colors.danger} style={styles.center}>{messageFor(create.error)}</Text> : null}
           <View style={{ alignSelf: 'stretch', gap: space.sm, marginTop: space.lg }}>
-            {inputs ? <Button label="Thử lại" onPress={again} loading={create.isPending} /> : null}
+            {inputs ? <Button label="Thử lại" onPress={again} loading={create.isPending} disabled={usageBlocked(usage.data)} /> : null}
+            {usage.data?.remaining === 0 ? <Button label="Xem ngày làm mới hạn mức" variant="plain" onPress={() => router.push('/quota')} /> : null}
             <Button label="Chọn lại đồ" variant="plain" onPress={() => router.back()} />
           </View>
         </View>

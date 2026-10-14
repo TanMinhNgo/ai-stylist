@@ -6,12 +6,14 @@ export type ClientErrorCode = ErrorCode | 'NETWORK_ERROR' | 'BAD_RESPONSE';
 export class RequestError extends Error {
   readonly code: ClientErrorCode;
   readonly status: number | undefined;
+  readonly details: unknown;
 
-  constructor(code: ClientErrorCode, status?: number) {
+  constructor(code: ClientErrorCode, status?: number, details?: unknown) {
     super(code);
     this.name = 'RequestError';
     this.code = code;
     this.status = status;
+    this.details = details;
   }
 
   /** Worth retrying automatically: the request may succeed unchanged. */
@@ -28,13 +30,15 @@ export function toRequestError(error: unknown): RequestError {
   const response = (error as HttpFailure | null)?.response;
   if (!response) return new RequestError('NETWORK_ERROR');
   const body = ApiError.safeParse(response.data);
-  if (body.success) return new RequestError(body.data.code, response.status);
+  if (body.success) return new RequestError(body.data.code, response.status, body.data.details);
   return new RequestError(response.status >= 500 ? 'INTERNAL_ERROR' : 'BAD_RESPONSE', response.status);
 }
 
 const MESSAGES: Record<ClientErrorCode, string> = {
   UNAUTHORIZED: 'Phiên đăng nhập đã hết. Vui lòng đăng nhập lại.',
   FORBIDDEN: 'Bạn không có quyền thực hiện thao tác này.',
+  QUOTA_EXCEEDED: 'Bạn đã dùng hết lượt thử đồ tháng này. Xem ngày làm mới trong phần hạn mức.',
+  RATE_LIMITED: 'Bạn thao tác hơi nhanh. Chờ một chút rồi thử lại.',
   NOT_FOUND: 'Không tìm thấy nội dung bạn cần.',
   VALIDATION_ERROR: 'Thông tin gửi đi chưa hợp lệ, vui lòng kiểm tra lại.',
   INTERNAL_ERROR: 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau ít phút.',
@@ -62,5 +66,10 @@ const MESSAGES: Record<ClientErrorCode, string> = {
 };
 
 export function messageFor(error: unknown): string {
-  return MESSAGES[toRequestError(error).code];
+  const e = toRequestError(error);
+  if (e.code === 'RATE_LIMITED' && e.details && typeof e.details === 'object' && 'retryAfterSeconds' in e.details) {
+    const seconds = e.details.retryAfterSeconds;
+    if (typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0) return `Chờ khoảng ${Math.ceil(seconds)} giây rồi thử lại.`;
+  }
+  return MESSAGES[e.code];
 }

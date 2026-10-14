@@ -1,4 +1,5 @@
 import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
+import * as Haptics from 'expo-haptics';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import type { ReactNode } from 'react';
 import {
@@ -99,7 +100,7 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading,
   const inactive = disabled || loading;
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => { void Haptics.selectionAsync().catch(() => undefined); onPress?.(); }}
       disabled={inactive}
       accessibilityRole="button"
       accessibilityLabel={label}
@@ -121,6 +122,11 @@ export function Card({ children, style }: { children?: ReactNode; style?: StyleP
 export function LoadingState({ label = 'Đang tải…' }: { label?: string }) {
   return (
     <View style={styles.state} accessibilityLiveRegion="polite">
+      <View accessible={false} importantForAccessibility="no-hide-descendants" style={{ width: '100%', maxWidth: 240, gap: 8 }}>
+        <View style={{ height: 64, borderRadius: radius.md, backgroundColor: colors.fill }} />
+        <View style={{ height: 12, width: '80%', borderRadius: 6, backgroundColor: colors.fill }} />
+        <View style={{ height: 12, width: '60%', borderRadius: 6, backgroundColor: colors.fill }} />
+      </View>
       <ActivityIndicator color={colors.inkSecondary} />
       <Text variant="callout" color={colors.inkSecondary}>{label}</Text>
     </View>

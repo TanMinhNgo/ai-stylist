@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Button, Card, ErrorState, Icon, LoadingState, Screen, Text } from '@/components/ui';
 import { useHealth } from '@/features/health/hooks';
 import { useMe } from '@/features/me/hooks';
+import { UsageNotice } from '@/features/usage/UsageNotice';
 import { colors, radius, space } from '@/theme';
 
 export default function ProfileScreen() {
@@ -84,6 +85,10 @@ export default function ProfileScreen() {
           }
         }}
       />
+      <Card><UsageNotice /></Card>
+      <Button label="Điều khoản sử dụng · bản dự thảo" variant="plain" onPress={() => router.push({ pathname: '/legal', params: { kind: 'terms' } })} />
+      <Button label="Quyền riêng tư · bản dự thảo" variant="plain" onPress={() => router.push({ pathname: '/legal', params: { kind: 'privacy' } })} />
+      <Button label="Xóa tài khoản" variant="danger" onPress={() => router.push('/delete-account')} />
     </Screen>
   );
 }
