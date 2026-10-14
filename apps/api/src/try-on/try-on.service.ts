@@ -59,6 +59,7 @@ export class TryOnService {
       row = await this.repository.find(userId, id);
       if (!row) throw new NotFoundException();
     }
+    const visible = row.status === 'done' && !row.outfit?.deletedAt;
     return TryOnJobResponse.parse({
       id: row.id,
       status: row.status,
@@ -66,10 +67,10 @@ export class TryOnService {
       createdAt: row.createdAt.toISOString(),
       errorCode: row.errorCode,
       resultUrl:
-        row.status === 'done' && row.resultFilePath
+        visible && row.resultFilePath
           ? this.storage.url(row.resultFilePath, 1600)
           : null,
-      outfitId: row.status === 'done' ? (row.outfit?.id ?? null) : null,
+      outfitId: visible ? (row.outfit?.id ?? null) : null,
     });
   }
   async fail(userId: string, id: string, code: string) {

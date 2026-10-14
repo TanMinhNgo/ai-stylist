@@ -1,3 +1,6 @@
+const { StylistService } = require('../dist/stylist/stylist.service');
+const { StylistProcessor } = require('../dist/stylist/stylist.processor');
+const { getQueueToken: stylistQueueToken } = require('@nestjs/bullmq');
 // Real Neon/Redis/ImageKit, fake AI; all fixture data is scoped and cleaned.
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
@@ -98,6 +101,12 @@ let stage = 'bootstrap';
           return fake.generate();
         },
       })
+      .overrideProvider(StylistService)
+      .useValue({ auto: () => Promise.resolve() })
+      .overrideProvider(StylistProcessor)
+      .useValue({})
+      .overrideProvider(stylistQueueToken('stylist'))
+      .useValue({})
       .compile();
     app = module.createNestApplication(new ExpressAdapter(), { logger: false });
     prisma = app.get(PrismaService);

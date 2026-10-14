@@ -1,4 +1,5 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Logger } from '@nestjs/common';
+import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job, UnrecoverableError } from 'bullmq';
 import { z } from 'zod';
 import {
@@ -19,6 +20,11 @@ const payload = z.strictObject({
 
 @Processor('analysis', { concurrency: 2 })
 export class AnalysisProcessor extends WorkerHost {
+  @OnWorkerEvent('error')
+  onWorkerError() {
+    Logger.error('Analysis worker connection error', AnalysisProcessor.name);
+  }
+
   constructor(
     private readonly repository: MediaRepository,
     private readonly storage: ImageStorageProvider,

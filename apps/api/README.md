@@ -169,3 +169,20 @@ node scripts/check-assets-provider.cjs
 ```
 
 Provider smoke đã tạo áo từ ảnh và nhẫn từ ý tưởng bằng model hiện có, xác nhận alpha và signed ImageKit PNG; report cục bộ trong .artifacts/mannequin-smoke. Không thay thế nghiệm thu ảnh người dùng, thiết bị hoặc đo chi phí production.
+
+## BE-04: stylist cá nhân và lookbook
+
+Migration `202610140004_stylist` bổ sung StyleProfile, StylistJob và metadata/vector outfit. Chạy `npm run db:migrate -w api` trước API trên môi trường mới. `STYLIST_PROVIDER=openai` dùng OPENAI_VISION_MODEL và key hiện có; fake chỉ dùng test/dev, bị cấm production.
+
+- GET/PUT `/style-profile`: style, dịp, budget VND, màu thích/tránh, bodyShape/skinTone. Khi chưa lưu, suy ra từ ảnh model đã phân tích gần nhất; PUT thiếu hai trường AI giữ giá trị hiện tại, null chủ động xóa.
+- GET `/outfits?limit=20&cursor=UUID&liked=true`: chỉ outfit đã lưu; bỏ liked để xem tất cả, false để xem không thích. GET `/outfits/:id` lấy chi tiết/ảnh ký hạn 15 phút.
+- POST `/outfits/:id/save` với `{saved:true|false}`; POST `/outfits/:id/feedback` với `{liked:true|false|null}`; DELETE `/outfits/:id` tombstone trước khi xóa ảnh để worker không hồi sinh dữ liệu.
+- POST `/outfits/:id/advice` và POST `/stylist/suggest` (`{occasion}`) cần Idempotency-Key, trả `{jobId}`. GET `/stylist/jobs/:id` poll tới ready/failed. Cùng key/payload trả cùng job; key mới khi advice đang chạy trả 409 IDEMPOTENCY_CONFLICT. Retry sau lỗi mạng giữ key; tác vụ mới chủ động dùng key mới.
+
+Try-on hoàn thành tự enqueue advice; lỗi tư vấn giữ nguyên ảnh. Outfit có adviceStatus/adviceErrorCode, promptVersion/knowledgeVersion và adviceIsMock riêng với isMock của ảnh. Tư vấn structured có schema và thử lại một lần nếu sai schema. Worker concurrency 1, deadline 5 phút, không tự phát lại AI sau khi đã bắt đầu gọi provider.
+
+Gợi ý trả tối đa 3 tổ hợp garmentIds/reason và message khi thiếu đồ. Lọc ownership/ready/allowed trước và sau AI; GET job loại tổ hợp chứa món đã xóa. Mobile vẫn đọc lại garment trước khi áp dụng Studio. Taste vector tính lại từ tối đa 50 feedback, decay 30 ngày, dislike trọng số -0.25; feedback trùng không cộng dồn. Candidate pgvector giới hạn 60 món theo dịp. Ngân sách chỉ là sở thích, chưa có dữ liệu giá sản phẩm.
+
+Kiểm tra bổ sung sau build: `node scripts/check-stylist-live.cjs` tại apps/api dùng Neon/ImageKit thật, fake AI và dispatch trong bộ nhớ, tự dọn fixture. `node scripts/check-stylist-provider.cjs` gọi OpenAI thật, có phát sinh phí; không nằm trong test suite mặc định. Quota/rate limit toàn bộ AI và purge tài khoản thuộc BE-05; hiện chỉ thử nội bộ.
+
+Redis phải sẵn sàng trước khi khởi tạo BullMQ. Nếu log báo public IP không nằm trong allowlist, kiểm tra Networking của Render theo mạng đang dùng. Không ghi cứng IP LAN vào env; launcher tự chọn IP và chờ API healthy trước Expo.

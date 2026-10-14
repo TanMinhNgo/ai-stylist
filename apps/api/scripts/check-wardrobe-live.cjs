@@ -1,3 +1,6 @@
+const { StylistService } = require('../dist/stylist/stylist.service');
+const { StylistProcessor } = require('../dist/stylist/stylist.processor');
+const { getQueueToken: stylistQueueToken } = require('@nestjs/bullmq');
 // Explicit live smoke test: one synthetic garment, paid AI calls, fixture cleanup.
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
@@ -31,6 +34,12 @@ let stage = 'bootstrap';
           return clerkId;
         },
       })
+      .overrideProvider(StylistService)
+      .useValue({ auto: () => Promise.resolve() })
+      .overrideProvider(StylistProcessor)
+      .useValue({})
+      .overrideProvider(stylistQueueToken('stylist'))
+      .useValue({})
       .compile();
     app = module.createNestApplication(new ExpressAdapter(), { logger: false });
     prisma = app.get(PrismaService);

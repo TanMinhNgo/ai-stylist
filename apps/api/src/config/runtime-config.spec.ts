@@ -48,4 +48,10 @@ describe('RuntimeConfig', () => {
     process.env.TRYON_PROVIDER = 'openai';
     expect(new RuntimeConfig().values.TRYON_PROVIDER).toBe('openai');
   });
+  it('rejects a fake stylist in production', () => {
+    process.env.STYLIST_PROVIDER = 'fake';
+    expect(new RuntimeConfig().values.STYLIST_PROVIDER).toBe('fake');
+    process.env.NODE_ENV = 'production';
+    expect(() => new RuntimeConfig()).toThrow('disabled in production');
+  });
 });

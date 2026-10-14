@@ -1,5 +1,6 @@
 import { RedisService } from './redis.service';
 import { RuntimeConfig } from '../config/runtime-config';
+import { Logger } from '@nestjs/common';
 
 const client = {
   status: 'wait',
@@ -24,6 +25,28 @@ describe('Redis readiness and lifecycle', () => {
     client.ping.mockResolvedValue('PONG');
   });
   afterEach(() => jest.useRealTimers());
+
+  it('reports an IP allowlist denial without logging private provider details', async () => {
+    const log = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => {});
+    const service = new RedisService(config);
+    const calls = client.on.mock.calls as [string, (error: Error) => void][];
+    const onError = calls.find(([event]) => event === 'error')?.[1] as (
+      error: Error,
+    ) => void;
+    onError(
+      new Error('Client IP address is not in the allowlist. private URL'),
+    );
+    client.connect.mockRejectedValue(new Error('Connection is closed'));
+    await expect(service.onModuleInit()).rejects.toThrow(
+      'current public IP is not allowlisted',
+    );
+    expect(log).toHaveBeenCalledWith(
+      'Redis access denied: current public IP is not allowlisted',
+    );
+    log.mockRestore();
+  });
 
   it('connects and pings before startup, then disconnects on shutdown', async () => {
     const service = new RedisService(config);

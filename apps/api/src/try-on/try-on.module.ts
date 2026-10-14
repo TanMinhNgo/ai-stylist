@@ -12,12 +12,14 @@ import { TryOnRepository } from './try-on.repository';
 import { TryOnService } from './try-on.service';
 import { TryOnController } from './try-on.controller';
 import { TryOnProcessor } from './try-on.processor';
+import { StylistModule } from '../stylist/stylist.module';
 
 @Module({
   imports: [
     DatabaseModule,
     QueueModule,
     MediaModule,
+    StylistModule,
     BullModule.registerQueue({ name: 'try-on', prefix: 'stylist' }),
   ],
   controllers: [TryOnController],

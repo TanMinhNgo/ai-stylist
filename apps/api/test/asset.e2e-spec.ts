@@ -1,3 +1,4 @@
+import { StylistProcessor } from '../src/stylist/stylist.processor';
 import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -47,7 +48,11 @@ describe('Mannequin asset HTTP contract', () => {
       .overrideProvider(PrismaService)
       .useValue({})
       .overrideProvider(RedisService)
-      .useValue({ client: {} })
+      .useValue({
+        client: {},
+        onModuleInit: async () => {},
+        onModuleDestroy: () => {},
+      })
       .overrideProvider(IdentityProvider)
       .useValue({ verifyToken: (token: string) => Promise.resolve(token) })
       .overrideProvider(UsersRepository)
@@ -71,6 +76,10 @@ describe('Mannequin asset HTTP contract', () => {
       .overrideProvider(AnalysisProcessor)
       .useValue({})
       .overrideProvider(TryOnProcessor)
+      .useValue({})
+      .overrideProvider(getQueueToken('stylist'))
+      .useValue({})
+      .overrideProvider(StylistProcessor)
       .useValue({})
       .overrideProvider(AssetProcessor)
       .useValue({})

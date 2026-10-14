@@ -32,7 +32,7 @@ async function bootstrap() {
 }
 void bootstrap().catch(() => {
   console.error(
-    'API startup failed. Check configuration and port availability.',
+    'API startup failed. Check DB/Redis connectivity, configuration and port availability.',
   );
   process.exitCode = 1;
 });

@@ -14,6 +14,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import type { Prisma } from '../generated/prisma/client';
 import { UsageService } from '../usage/usage.service';
+import { snapshotOutfit } from '../stylist/snapshot';
 
 const active = {
   status: { in: ['queued', 'processing'] },
@@ -43,6 +44,7 @@ export class TryOnRepository {
       where: {
         id: { in: input.garmentIds },
         userId,
+        deletingAt: null,
         user: { deletedAt: null },
       },
     });
@@ -170,7 +172,7 @@ export class TryOnRepository {
         data: { status: 'done', errorCode: null },
       });
       if (!updated.count) return;
-      await tx.outfit.create({
+      const outfit = await tx.outfit.create({
         data: {
           userId,
           tryOnJobId: id,
@@ -178,6 +180,7 @@ export class TryOnRepository {
           filePath: row.resultFilePath,
         },
       });
+      await snapshotOutfit(tx, userId, outfit.id, row.garmentIds);
     });
   }
   fail(userId: string, id: string, errorCode: string) {

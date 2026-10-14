@@ -21,6 +21,8 @@ model User {
   tryOnJobs      TryOnJob[]
   outfits        Outfit[]
   assetJobs      AssetJob[]
+  styleProfile   StyleProfile?
+  stylistJobs    StylistJob[]
 
   @@map("users")
 }
@@ -146,10 +148,60 @@ model Outfit {
   imagekitFileId String   @unique @map("imagekit_file_id")
   filePath       String   @map("file_path")
   advice         Json?
+  garmentSnapshot Json? @map("garment_snapshot")
+  embedding      Unsupported("vector(1024)")?
+  liked          Boolean?
+  feedbackAt     DateTime? @map("feedback_at") @db.Timestamptz(3)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
+  adviceStatus   String? @map("advice_status")
+  adviceErrorCode String? @map("advice_error_code")
+  adviceJobId    String? @map("advice_job_id") @db.Uuid
+  advicePromptVersion String? @map("advice_prompt_version")
+  adviceKnowledgeVersion String? @map("advice_knowledge_version")
+  adviceProvider String? @map("advice_provider")
+  stylistJobs    StylistJob[]
   savedAt        DateTime? @map("saved_at") @db.Timestamptz(3)
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   user           User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   tryOnJob       TryOnJob @relation(fields: [tryOnJobId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   @@index([userId, createdAt])
   @@map("outfits")
+}
+
+model StyleProfile {
+  userId String @id @map("user_id") @db.Uuid
+  styles String[] @default([])
+  occasions String[] @default([])
+  budget Int?
+  preferredColors String[] @default([]) @map("preferred_colors")
+  avoidedColors String[] @default([]) @map("avoided_colors")
+  bodyShape String? @map("body_shape")
+  skinTone String? @map("skin_tone")
+  tasteVector Unsupported("vector(1024)")? @map("taste_vector")
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user User @relation(fields:[userId],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  @@map("style_profiles")
+}
+
+model StylistJob {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  key String
+  requestHash String @map("request_hash")
+  kind String
+  input Json
+  outfitId String? @map("outfit_id") @db.Uuid
+  provider String
+  model String
+  status String @default("queued")
+  errorCode String? @map("error_code")
+  startedAt DateTime? @map("started_at") @db.Timestamptz(3)
+  result Json?
+  deadlineAt DateTime @map("deadline_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user User @relation(fields:[userId],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  outfit Outfit? @relation(fields:[outfitId],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  @@unique([userId,key])
+  @@index([status,deadlineAt])
+  @@map("stylist_jobs")
 }

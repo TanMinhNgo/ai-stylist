@@ -11,6 +11,7 @@ import { RuntimeConfig } from '../config/runtime-config';
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   readonly client: Redis;
   private readonly logger = new Logger(RedisService.name);
+  private accessDenied = false;
 
   constructor(config: RuntimeConfig) {
     this.client = new Redis(config.values.REDIS_URL, {
@@ -19,14 +20,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       connectTimeout: 5000,
       retryStrategy: (attempt) => Math.min(attempt * 200, 2000),
     });
-    this.client.on('error', () => this.logger.error('Redis connection error'));
+    this.client.on('error', (error: unknown) => {
+      if (error instanceof Error && /allowlist/i.test(error.message))
+        this.accessDenied = true;
+      this.logger.error(
+        this.accessDenied
+          ? 'Redis access denied: current public IP is not allowlisted'
+          : 'Redis connection error',
+      );
+    });
   }
 
   async onModuleInit() {
     // BullMQ may start the shared connection before Nest invokes this hook.
-    if (this.client.status === 'wait') await this.client.connect();
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
+      if (this.client.status === 'wait') await this.client.connect();
       await Promise.race([
         this.client.ping(),
         new Promise<never>((_resolve, reject) => {
@@ -36,6 +45,13 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
           );
         }),
       ]);
+      this.accessDenied = false;
+    } catch (error) {
+      if (this.accessDenied)
+        throw new Error(
+          'Redis access denied: current public IP is not allowlisted',
+        );
+      throw error;
     } finally {
       clearTimeout(timer);
     }

@@ -3,7 +3,7 @@ import {
   OnApplicationBootstrap,
   OnModuleDestroy,
 } from '@nestjs/common';
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job, UnrecoverableError } from 'bullmq';
 import { z } from 'zod';
 import {
@@ -27,6 +27,10 @@ export class AssetProcessor
   private timer?: ReturnType<typeof setInterval>;
   private sweeping = false;
   private readonly logger = new Logger(AssetProcessor.name);
+  @OnWorkerEvent('error')
+  onWorkerError() {
+    this.logger.error('Asset worker connection error');
+  }
   constructor(
     private readonly repo: AssetRepository,
     private readonly provider: AssetProvider,

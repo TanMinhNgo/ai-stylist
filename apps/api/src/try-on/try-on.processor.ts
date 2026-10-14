@@ -4,7 +4,7 @@ import {
   Logger,
   HttpException,
 } from '@nestjs/common';
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job, UnrecoverableError } from 'bullmq';
 import { z } from 'zod';
 import { TryOnRepository } from './try-on.repository';
@@ -12,6 +12,7 @@ import { TryOnService } from './try-on.service';
 import { TryOnProvider, TryOnProviderError } from './try-on.provider';
 import { ImageStorageProvider } from '../uploads/image-storage.provider';
 import { ErrorCode } from '@stylist/shared';
+import { StylistService } from '../stylist/stylist.service';
 
 const payload = z.strictObject({ id: z.uuid(), userId: z.uuid() });
 @Processor('try-on', { concurrency: 1, maxStalledCount: 1 })
@@ -22,11 +23,16 @@ export class TryOnProcessor
   private timer?: ReturnType<typeof setInterval>;
   private sweeping = false;
   private readonly logger = new Logger(TryOnProcessor.name);
+  @OnWorkerEvent('error')
+  onWorkerError() {
+    this.logger.error('Try-on worker connection error');
+  }
   constructor(
     private readonly repository: TryOnRepository,
     private readonly service: TryOnService,
     private readonly provider: TryOnProvider,
     private readonly storage: ImageStorageProvider,
+    private readonly stylist?: StylistService,
   ) {
     super();
   }
@@ -43,6 +49,18 @@ export class TryOnProcessor
   }
   onModuleDestroy() {
     clearInterval(this.timer);
+  }
+  private async complete(userId: string, id: string) {
+    await this.repository.complete(userId, id);
+    try {
+      if (this.stylist) {
+        const row = await this.repository.find(userId, id);
+        if (row?.outfit && !row.outfit.deletedAt)
+          await this.stylist.auto(userId, row.outfit.id);
+      }
+    } catch {
+      this.logger.error('Advice scheduling deferred; try-on image preserved');
+    }
   }
   async sweep() {
     if (this.sweeping) return;
@@ -75,7 +93,7 @@ export class TryOnProcessor
       return;
     }
     if (row.resultFileId) {
-      await this.repository.complete(userId, id);
+      await this.complete(userId, id);
       return;
     }
     if (
@@ -109,7 +127,7 @@ export class TryOnProcessor
         await this.storage.delete(uploaded.fileId);
         return;
       }
-      await this.repository.complete(userId, id);
+      await this.complete(userId, id);
     } catch (error) {
       // An uncertain checkpoint may already reference the file; never delete it here.
       const checkpoint = await this.repository.find(userId, id);

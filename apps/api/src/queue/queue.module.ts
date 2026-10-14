@@ -2,6 +2,16 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { RedisService } from './redis.service';
 
+export async function queueOptions(redis: RedisService) {
+  try {
+    await redis.onModuleInit();
+  } catch (error) {
+    redis.onModuleDestroy();
+    throw error;
+  }
+  return { connection: redis.client };
+}
+
 @Module({ providers: [RedisService], exports: [RedisService] })
 export class RedisModule {}
 
@@ -11,7 +21,7 @@ export class RedisModule {}
     BullModule.forRootAsync({
       imports: [RedisModule],
       inject: [RedisService],
-      useFactory: (redis: RedisService) => ({ connection: redis.client }),
+      useFactory: queueOptions,
     }),
   ],
   exports: [BullModule, RedisModule],
