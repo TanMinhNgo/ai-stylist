@@ -1,3 +1,4 @@
+import { AiMeter, metered } from '../usage/ai-meter.service';
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
@@ -13,7 +14,10 @@ export class OpenAiStylistProvider extends StylistProvider {
   get model() {
     return this.config.values.OPENAI_VISION_MODEL || '';
   }
-  constructor(private readonly config: RuntimeConfig) {
+  constructor(
+    private readonly config: RuntimeConfig,
+    private readonly meter?: AiMeter,
+  ) {
     super();
   }
   private async generate<T>(
@@ -46,29 +50,31 @@ export class OpenAiStylistProvider extends StylistProvider {
       knowledge;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const response = await client.responses.parse({
-          model: this.model,
-          store: false,
-          input: [
-            { role: 'system', content: prompt },
-            {
-              role: 'user',
-              content: [
-                { type: 'input_text', text: JSON.stringify(context) },
-                ...(imageUrl
-                  ? [
-                      {
-                        type: 'input_image' as const,
-                        image_url: imageUrl,
-                        detail: 'auto' as const,
-                      },
-                    ]
-                  : []),
-              ],
-            },
-          ],
-          text: { format: zodTextFormat(schema, 'stylist') },
-        });
+        const response = await metered(this.meter, 'stylist', this.model, () =>
+          client.responses.parse({
+            model: this.model,
+            store: false,
+            input: [
+              { role: 'system', content: prompt },
+              {
+                role: 'user',
+                content: [
+                  { type: 'input_text', text: JSON.stringify(context) },
+                  ...(imageUrl
+                    ? [
+                        {
+                          type: 'input_image' as const,
+                          image_url: imageUrl,
+                          detail: 'auto' as const,
+                        },
+                      ]
+                    : []),
+                ],
+              },
+            ],
+            text: { format: zodTextFormat(schema, 'stylist') },
+          }),
+        );
         return schema.parse(response.output_parsed);
       } catch (error) {
         if (!(error instanceof z.ZodError) || attempt === 1) throw error;

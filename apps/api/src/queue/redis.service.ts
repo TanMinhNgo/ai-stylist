@@ -3,9 +3,29 @@ import {
   Logger,
   OnModuleInit,
   OnModuleDestroy,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import Redis from 'ioredis';
 import { RuntimeConfig } from '../config/runtime-config';
+
+export async function redisCommand<T>(command: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      command,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new Error('Redis command timeout')),
+          5000,
+        );
+      }),
+    ]);
+  } catch {
+    throw new ServiceUnavailableException();
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {

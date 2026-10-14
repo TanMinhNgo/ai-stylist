@@ -1,3 +1,4 @@
+import { AiMeter } from '../usage/ai-meter.service';
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { DatabaseModule } from '../database/database.module';
@@ -32,11 +33,11 @@ import { AssetImage } from './asset-image';
     { provide: VisionProvider, useClass: OpenAiVisionProvider },
     {
       provide: AssetProvider,
-      inject: [RuntimeConfig],
-      useFactory: (config: RuntimeConfig) =>
+      inject: [RuntimeConfig, AiMeter],
+      useFactory: (config: RuntimeConfig, meter: AiMeter) =>
         config.values.ASSET_PROVIDER === 'fake'
           ? new FakeAssetProvider()
-          : new OpenAiAssetProvider(config),
+          : new OpenAiAssetProvider(config, meter),
     },
   ],
   exports: [AssetService],

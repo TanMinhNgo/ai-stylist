@@ -1,3 +1,4 @@
+import { AiMeter, metered } from '../usage/ai-meter.service';
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
@@ -16,29 +17,34 @@ import { VisionProvider } from './vision.provider';
 
 @Injectable()
 export class OpenAiVisionProvider extends VisionProvider {
-  constructor(private readonly config: RuntimeConfig) {
+  constructor(
+    private readonly config: RuntimeConfig,
+    private readonly meter?: AiMeter,
+  ) {
     super();
   }
   private get client() {
     const apiKey = this.config.values.OPENAI_API_KEY;
     if (!apiKey) throw new ServiceUnavailableException();
-    return new OpenAI({ apiKey, maxRetries: 1, timeout: 60000 });
+    return new OpenAI({ apiKey, maxRetries: 0, timeout: 60000 });
   }
   private async analyze<T>(url: string, schema: z.ZodType<T>, prompt: string) {
     const model = this.config.values.OPENAI_VISION_MODEL;
     if (!model) throw new ServiceUnavailableException();
-    const response = await this.client.responses.parse({
-      model,
-      store: false,
-      input: [
-        { role: 'system', content: prompt },
-        {
-          role: 'user',
-          content: [{ type: 'input_image', image_url: url, detail: 'auto' }],
-        },
-      ],
-      text: { format: zodTextFormat(schema, 'analysis') },
-    });
+    const response = await metered(this.meter, 'vision', model, () =>
+      this.client.responses.parse({
+        model,
+        store: false,
+        input: [
+          { role: 'system', content: prompt },
+          {
+            role: 'user',
+            content: [{ type: 'input_image', image_url: url, detail: 'auto' }],
+          },
+        ],
+        text: { format: zodTextFormat(schema, 'analysis') },
+      }),
+    );
     return schema.parse(response.output_parsed);
   }
   modelPhoto(url: string) {
@@ -60,11 +66,13 @@ export class OpenAiVisionProvider extends VisionProvider {
   async embedding(description: string) {
     const model = this.config.values.OPENAI_EMBEDDING_MODEL;
     if (!model) throw new ServiceUnavailableException();
-    const response = await this.client.embeddings.create({
-      model,
-      input: description,
-      dimensions: EMBEDDING_DIMENSIONS,
-    });
+    const response = await metered(this.meter, 'embedding', model, () =>
+      this.client.embeddings.create({
+        model,
+        input: description,
+        dimensions: EMBEDDING_DIMENSIONS,
+      }),
+    );
     return z
       .array(z.number().finite())
       .length(EMBEDDING_DIMENSIONS)

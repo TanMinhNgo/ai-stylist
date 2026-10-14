@@ -13,6 +13,7 @@ import { TryOnProvider, TryOnProviderError } from './try-on.provider';
 import { ImageStorageProvider } from '../uploads/image-storage.provider';
 import { ErrorCode } from '@stylist/shared';
 import { StylistService } from '../stylist/stylist.service';
+import { WorkService } from '../usage/work.service';
 
 const payload = z.strictObject({ id: z.uuid(), userId: z.uuid() });
 @Processor('try-on', { concurrency: 1, maxStalledCount: 1 })
@@ -33,6 +34,7 @@ export class TryOnProcessor
     private readonly provider: TryOnProvider,
     private readonly storage: ImageStorageProvider,
     private readonly stylist?: StylistService,
+    private readonly work?: WorkService,
   ) {
     super();
   }
@@ -73,6 +75,12 @@ export class TryOnProcessor
     }
   }
   async process(job: Job) {
+    const { userId, id } = payload.parse(job.data);
+    return this.work
+      ? this.work.run(userId, id, () => this.execute(job))
+      : this.execute(job);
+  }
+  private async execute(job: Job) {
     try {
       return await this.run(job);
     } catch (error) {

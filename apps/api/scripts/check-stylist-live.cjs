@@ -1,3 +1,6 @@
+const { PrivacyProcessor } = require('../dist/privacy/privacy.processor');
+const { RateLimitGuard } = require('../dist/usage/rate-limit.guard');
+const { JobLimitsService } = require('../dist/usage/job-limits.service');
 // Real Neon/ImageKit with fake AI and in-memory dispatch; does not require Redis.
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
@@ -66,6 +69,14 @@ let stage = 'bootstrap';
         onModuleInit: async () => {},
         onModuleDestroy: () => {},
       })
+      .overrideProvider(PrivacyProcessor)
+      .useValue({})
+      .overrideProvider(getQueueToken('privacy'))
+      .useValue({ add: async () => ({}) })
+      .overrideGuard(RateLimitGuard)
+      .useValue({ canActivate: () => true })
+      .overrideProvider(JobLimitsService)
+      .useValue({ lock: async () => {}, check: async () => {} })
       .overrideProvider(IdentityProvider)
       .useValue({
         verifyToken: async (token) =>

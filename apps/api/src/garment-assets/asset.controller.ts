@@ -1,3 +1,5 @@
+import { UseGuards } from '@nestjs/common';
+import { RateLimitGuard } from '../usage/rate-limit.guard';
 import { Body, Controller, Get, Headers, Param, Post } from '@nestjs/common';
 import {
   CreateAssetJobsRequest,
@@ -16,7 +18,9 @@ export class AssetController {
   @Get('asset-generation/quota') quota(@CurrentUser() user: User) {
     return this.service.quota(user.id);
   }
-  @Post('garment-asset-jobs') create(
+  @UseGuards(RateLimitGuard)
+  @Post('garment-asset-jobs')
+  create(
     @CurrentUser() user: User,
     @Headers('idempotency-key') key: unknown,
     @Body(new ZodValidationPipe(CreateAssetJobsRequest))
@@ -34,7 +38,9 @@ export class AssetController {
   ) {
     return this.service.get(user.id, p.id);
   }
-  @Post('garment-ideas') plan(
+  @UseGuards(RateLimitGuard)
+  @Post('garment-ideas')
+  plan(
     @CurrentUser() user: User,
     @Headers('idempotency-key') key: unknown,
     @Body(new ZodValidationPipe(IdeaRequest)) body: IdeaRequest,

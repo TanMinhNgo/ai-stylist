@@ -19,6 +19,7 @@ import type { Prisma, AssetJob } from '../generated/prisma/client';
 import { MediaRepository } from '../media/media.repository';
 import { assetDay } from './asset-time';
 import type { RenderMeta } from './asset-image';
+import { JobLimitsService } from '../usage/job-limits.service';
 
 export const JobInput = z.union([
   AssetInput,
@@ -35,6 +36,7 @@ export class AssetRepository {
   constructor(
     private readonly prisma: PrismaService,
     private readonly media: MediaRepository,
+    private readonly limits: JobLimitsService,
   ) {}
   find(userId: string, id: string) {
     return this.prisma.assetJob.findFirst({
@@ -119,6 +121,7 @@ export class AssetRepository {
               message: 'Select a clearly visible supported garment',
             });
         }
+      await this.limits.check(tx, userId, inputs.length);
       const quota = await this.usage(userId, tx);
       const imageCount = inputs.filter((i) => i.source !== 'plan').length;
       if (
@@ -218,6 +221,7 @@ export class AssetRepository {
     embedding: number[] | null,
   ) {
     return this.prisma.$transaction(async (tx) => {
+      await this.limits.lock(tx, userId);
       const row = await tx.assetJob.findFirst({
         where: { id, userId, ...active },
       });

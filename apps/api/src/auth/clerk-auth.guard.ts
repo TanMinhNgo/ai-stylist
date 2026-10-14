@@ -6,7 +6,11 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthService } from './auth.service';
-import { PUBLIC_ROUTE, UserRequest } from './auth.decorators';
+import {
+  PUBLIC_ROUTE,
+  ALLOW_DELETED_USER,
+  UserRequest,
+} from './auth.decorators';
 
 @Injectable()
 export class ClerkAuthGuard implements CanActivate {
@@ -26,7 +30,13 @@ export class ClerkAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<UserRequest>();
     const match = request.headers.authorization?.match(/^Bearer ([^\s]+)$/i);
     if (!match) throw new UnauthorizedException();
-    request.user = await this.auth.currentUser(match[1]);
+    request.user = await this.auth.currentUser(
+      match[1],
+      this.reflector.getAllAndOverride<boolean>(ALLOW_DELETED_USER, [
+        context.getHandler(),
+        context.getClass(),
+      ]) === true,
+    );
     return true;
   }
 }

@@ -61,6 +61,24 @@ export class ImageKitProvider extends ImageStorageProvider {
         throw new Error('Image deletion failed');
     }
   }
+  async listUserFiles(userId: string) {
+    if (!/^[0-9a-f-]{36}$/i.test(userId))
+      throw new Error('Invalid user folder');
+    const prefix = `/stylist/${userId}/`;
+    const files = await this.client.assets.list({
+      searchQuery: `path : "${prefix}*"`,
+      limit: 100,
+    });
+    return files.map((file) => {
+      if (
+        !('fileId' in file) ||
+        !file.fileId ||
+        !file.filePath?.startsWith(prefix)
+      )
+        throw new Error('Invalid storage inventory');
+      return file.fileId;
+    });
+  }
 
   async saveResult(image: Buffer, userId: string, jobId: string) {
     const file = await this.client.files.upload({

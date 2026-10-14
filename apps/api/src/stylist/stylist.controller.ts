@@ -1,3 +1,5 @@
+import { UseGuards } from '@nestjs/common';
+import { RateLimitGuard } from '../usage/rate-limit.guard';
 import {
   Body,
   Controller,
@@ -79,7 +81,9 @@ export class StylistController {
   ) {
     return this.service.remove(user.id, p.id);
   }
-  @Post('outfits/:id/advice') advice(
+  @UseGuards(RateLimitGuard)
+  @Post('outfits/:id/advice')
+  advice(
     @CurrentUser() user: User,
     @Param(new ZodValidationPipe(ResourceIdParams)) p: { id: string },
     @Headers('idempotency-key') key: unknown,
@@ -90,7 +94,9 @@ export class StylistController {
       { kind: 'advice', outfitId: p.id },
     );
   }
-  @Post('stylist/suggest') suggest(
+  @UseGuards(RateLimitGuard)
+  @Post('stylist/suggest')
+  suggest(
     @CurrentUser() user: User,
     @Body(new ZodValidationPipe(SuggestRequest))
     body: z.infer<typeof SuggestRequest>,

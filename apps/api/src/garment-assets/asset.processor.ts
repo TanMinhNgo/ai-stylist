@@ -18,6 +18,7 @@ import { AssetImage } from './asset-image';
 import { AssetService } from './asset.service';
 import { ImageStorageProvider } from '../uploads/image-storage.provider';
 import { VisionProvider } from '../media/vision.provider';
+import { WorkService } from '../usage/work.service';
 const payload = z.strictObject({ userId: z.uuid(), id: z.uuid() });
 @Processor('garment-assets', { concurrency: 1, maxStalledCount: 1 })
 export class AssetProcessor
@@ -38,6 +39,7 @@ export class AssetProcessor
     private readonly storage: ImageStorageProvider,
     private readonly vision: VisionProvider,
     private readonly service: AssetService,
+    private readonly work?: WorkService,
   ) {
     super();
   }
@@ -71,6 +73,12 @@ export class AssetProcessor
     }
   }
   async process(job: Job) {
+    const { userId, id } = payload.parse(job.data);
+    return this.work
+      ? this.work.run(userId, id, () => this.execute(job))
+      : this.execute(job);
+  }
+  private async execute(job: Job) {
     try {
       await this.run(job);
     } catch (error) {

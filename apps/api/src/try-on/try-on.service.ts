@@ -36,6 +36,7 @@ export class TryOnService {
           {
             jobId: row.id,
             attempts: 3,
+            priority: row.queuePriority,
             backoff: { type: 'exponential', delay: 2000 },
             removeOnComplete: 100,
             removeOnFail: 100,

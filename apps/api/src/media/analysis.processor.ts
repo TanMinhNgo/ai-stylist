@@ -11,6 +11,7 @@ import { MediaRepository } from './media.repository';
 import { ImageStorageProvider } from '../uploads/image-storage.provider';
 import { VisionProvider } from './vision.provider';
 import { AssetService } from '../garment-assets/asset.service';
+import { WorkService } from '../usage/work.service';
 
 const payload = z.strictObject({
   kind: z.enum(['model-photo', 'garment']),
@@ -30,14 +31,25 @@ export class AnalysisProcessor extends WorkerHost {
     private readonly storage: ImageStorageProvider,
     private readonly vision: VisionProvider,
     private readonly assets?: AssetService,
+    private readonly work?: WorkService,
   ) {
     super();
   }
 
   async process(job: Job) {
+    const { userId, id } = payload.parse(job.data);
+    return this.work
+      ? this.work.run(userId, id, () => this.execute(job))
+      : this.execute(job);
+  }
+  private async execute(job: Job) {
     const { kind, userId, id } = payload.parse(job.data);
     const row = await this.repository.find(kind, userId, id);
     if (!row || row.status !== 'pending') return;
+    if (row.createdAt && row.createdAt.getTime() + 15 * 60000 <= Date.now()) {
+      await this.repository.fail(kind, userId, id, 'MEDIA_PROCESSING_FAILED');
+      return;
+    }
     try {
       const url = this.storage.url(row.filePath, 1024);
       if (kind === 'model-photo') {

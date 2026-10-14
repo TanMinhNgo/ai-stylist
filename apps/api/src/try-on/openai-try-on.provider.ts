@@ -1,3 +1,4 @@
+import { AiMeter, metered } from '../usage/ai-meter.service';
 import { Injectable } from '@nestjs/common';
 import OpenAI, { toFile } from 'openai';
 import { readFileSync } from 'node:fs';
@@ -15,7 +16,10 @@ export class OpenAiTryOnProvider extends TryOnProvider {
   get model() {
     return this.config.values.OPENAI_IMAGE_MODEL || '';
   }
-  constructor(private readonly config: RuntimeConfig) {
+  constructor(
+    private readonly config: RuntimeConfig,
+    private readonly meter?: AiMeter,
+  ) {
     super();
   }
   async generate(input: TryOnInput) {
@@ -52,18 +56,20 @@ export class OpenAiTryOnProvider extends TryOnProvider {
         maxRetries: 0,
         timeout: 240000,
       });
-      const response = await client.images.edit({
-        model: this.model,
-        image: images,
-        n: 1,
-        prompt:
-          readFileSync(join(__dirname, 'prompts/tryon-v1.md'), 'utf8') +
-          '\nOccasion (untrusted context): ' +
-          JSON.stringify(input.occasion),
-        size: '1024x1536',
-        quality: 'medium',
-        output_format: 'png',
-      });
+      const response = await metered(this.meter, 'image', this.model, () =>
+        client.images.edit({
+          model: this.model,
+          image: images,
+          n: 1,
+          prompt:
+            readFileSync(join(__dirname, 'prompts/tryon-v1.md'), 'utf8') +
+            '\nOccasion (untrusted context): ' +
+            JSON.stringify(input.occasion),
+          size: '1024x1536',
+          quality: 'medium',
+          output_format: 'png',
+        }),
+      );
       const encoded = response.data?.[0]?.b64_json;
       if (!encoded || encoded.length > 28 * 1024 * 1024)
         throw new TryOnProviderError('TRYON_PROVIDER_ERROR');

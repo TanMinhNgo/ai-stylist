@@ -12,6 +12,7 @@ import { StylistProvider } from './stylist.provider';
 import { StylistService, snapshotSchema } from './stylist.service';
 import { ImageStorageProvider } from '../uploads/image-storage.provider';
 import { validateSuggestions } from './suggestions';
+import { WorkService } from '../usage/work.service';
 const payload = z.strictObject({ userId: z.uuid(), id: z.uuid() });
 const inputSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('advice'), outfitId: z.uuid() }),
@@ -30,6 +31,7 @@ export class StylistProcessor
     private readonly provider: StylistProvider,
     private readonly service: StylistService,
     private readonly storage: ImageStorageProvider,
+    private readonly work?: WorkService,
   ) {
     super();
   }
@@ -61,6 +63,12 @@ export class StylistProcessor
     }
   }
   async process(job: Job) {
+    const { userId, id } = payload.parse(job.data);
+    return this.work
+      ? this.work.run(userId, id, () => this.execute(job))
+      : this.execute(job);
+  }
+  private async execute(job: Job) {
     const { userId, id } = payload.parse(job.data);
     const row = await this.repo.find(userId, id);
     if (!row || ['ready', 'failed'].includes(row.status)) return;

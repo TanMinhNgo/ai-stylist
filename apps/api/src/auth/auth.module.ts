@@ -7,9 +7,10 @@ import { ClerkAuthGuard } from './clerk-auth.guard';
 import { IdentityProvider } from './identity.provider';
 import { ClerkIdentityProvider } from './clerk-identity.provider';
 import { UsersRepository } from './users.repository';
+import { PrivacyModule } from '../privacy/privacy.module';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, PrivacyModule],
   controllers: [AuthController],
   providers: [
     AuthService,

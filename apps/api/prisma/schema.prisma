@@ -23,6 +23,10 @@ model User {
   assetJobs      AssetJob[]
   styleProfile   StyleProfile?
   stylistJobs    StylistJob[]
+  usageLedger    UsageLedger[]
+  deletion       AccountDeletion?
+  workLeases     WorkLease[]
+  aiCalls        AiCall[]
 
   @@map("users")
 }
@@ -120,6 +124,7 @@ model TryOnJob {
   userId              String   @map("user_id") @db.Uuid
   idempotencyKey      String   @map("idempotency_key")
   requestHash         String   @map("request_hash")
+  queuePriority       Int      @default(10) @map("queue_priority")
   modelPhotoId        String   @map("model_photo_id") @db.Uuid
   garmentIds          String[] @map("garment_ids") @db.Uuid
   occasion            String
@@ -139,6 +144,56 @@ model TryOnJob {
   @@unique([userId, idempotencyKey])
   @@index([status, deadlineAt])
   @@map("tryon_jobs")
+}
+
+model UsageLedger {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  jobId String @map("job_id") @db.Uuid
+  delta Int
+  periodStart DateTime @map("period_start") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user User @relation(fields:[userId],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  @@unique([jobId,delta])
+  @@index([userId,periodStart])
+  @@map("usage_ledger")
+}
+
+model AccountDeletion {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+  status String @default("queued")
+  retryAt DateTime @default(now()) @map("retry_at") @db.Timestamptz(3)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+  user User @relation(fields:[userId],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  @@index([status,retryAt])
+  @@map("account_deletions")
+}
+
+model WorkLease {
+  id String @id @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  jobId String @map("job_id") @db.Uuid
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  user User @relation(fields:[userId],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  @@index([userId,expiresAt])
+  @@map("work_leases")
+}
+
+model AiCall {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  jobId String @map("job_id") @db.Uuid
+  kind String
+  model String
+  status String @default("started")
+  inputTokens Int? @map("input_tokens")
+  outputTokens Int? @map("output_tokens")
+  estimatedUsd Float? @map("estimated_usd")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user User @relation(fields:[userId],references:[id],onDelete:NoAction,onUpdate:NoAction)
+  @@index([userId,createdAt])
+  @@map("ai_calls")
 }
 
 model Outfit {

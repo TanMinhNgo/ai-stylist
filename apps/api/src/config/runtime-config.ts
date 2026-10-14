@@ -2,6 +2,41 @@ import { Global, Injectable, Module } from '@nestjs/common';
 import { z } from 'zod';
 
 const schema = z.object({
+  CLERK_BILLING_ENABLED: z.enum(['true', 'false']).default('false'),
+  CLERK_PLUS_PLAN_SLUG: z.string().min(1).default('plus'),
+  CLERK_PRO_PLAN_SLUG: z.string().min(1).default('pro'),
+  USAGE_FREE_LIMIT: z.coerce.number().int().min(0).max(10000).default(5),
+  USAGE_PLUS_LIMIT: z.coerce.number().int().min(0).max(10000).default(50),
+  USAGE_PRO_LIMIT: z.coerce.number().int().min(0).max(10000).default(200),
+  AI_RATE_LIMIT_PER_MINUTE: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(1000)
+    .default(10),
+  AI_MAX_ACTIVE_JOBS: z.coerce.number().int().min(1).max(100).default(4),
+  AI_COST_RATES_JSON: z
+    .string()
+    .default('{}')
+    .transform((value, ctx) => {
+      try {
+        return z
+          .record(
+            z.string(),
+            z.strictObject({
+              input: z.number().finite().nonnegative(),
+              output: z.number().finite().nonnegative(),
+            }),
+          )
+          .parse(JSON.parse(value));
+      } catch {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Expected model rates per million tokens',
+        });
+        return z.NEVER;
+      }
+    }),
   DATABASE_URL: z.url().refine((url) => /^postgres(ql)?:/.test(url)),
   REDIS_URL: z.url().refine((url) => /^rediss?:/.test(url)),
   CLERK_SECRET_KEY: z.string().startsWith('sk_'),

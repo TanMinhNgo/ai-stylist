@@ -1,3 +1,5 @@
+import { UseGuards } from '@nestjs/common';
+import { RateLimitGuard } from '../usage/rate-limit.guard';
 import {
   Body,
   Controller,
@@ -22,6 +24,7 @@ import { MediaService } from '../media/media.service';
 @Controller('model-photos')
 export class ModelPhotosController {
   constructor(private readonly media: MediaService) {}
+  @UseGuards(RateLimitGuard)
   @Post()
   create(
     @CurrentUser() user: User,

@@ -1,3 +1,6 @@
+const { PrivacyProcessor } = require('../dist/privacy/privacy.processor');
+const { RateLimitGuard } = require('../dist/usage/rate-limit.guard');
+const { JobLimitsService } = require('../dist/usage/job-limits.service');
 const { StylistService } = require('../dist/stylist/stylist.service');
 const { StylistProcessor } = require('../dist/stylist/stylist.processor');
 const { getQueueToken: stylistQueueToken } = require('@nestjs/bullmq');
@@ -72,6 +75,7 @@ let reservations = 0,
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(UsageService)
       .useValue({
+        plans: { getUserPlan: async () => 'free' },
         reserve: () => {
           reservations++;
         },
@@ -79,6 +83,14 @@ let reservations = 0,
           refunds++;
         },
       })
+      .overrideProvider(PrivacyProcessor)
+      .useValue({})
+      .overrideProvider(getQueueToken('privacy'))
+      .useValue({ add: async () => ({}) })
+      .overrideGuard(RateLimitGuard)
+      .useValue({ canActivate: () => true })
+      .overrideProvider(JobLimitsService)
+      .useValue({ lock: async () => {}, check: async () => {} })
       .overrideProvider(IdentityProvider)
       .useValue({
         verifyToken: async (token) => {

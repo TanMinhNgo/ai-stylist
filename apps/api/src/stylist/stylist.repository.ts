@@ -17,6 +17,7 @@ import { PrismaService } from '../database/prisma.service';
 import type { Prisma } from '../generated/prisma/client';
 import { snapshotOutfit } from './snapshot';
 import { parseVector, tasteVector, formalityRange } from './taste';
+import { JobLimitsService } from '../usage/job-limits.service';
 
 export type StylistInput =
   | { kind: 'advice'; outfitId: string }
@@ -28,7 +29,10 @@ const active = {
 };
 @Injectable()
 export class StylistRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly limits: JobLimitsService,
+  ) {}
   private async lock(db: Prisma.TransactionClient, userId: string) {
     const users = await db.$queryRaw<
       { id: string }[]
@@ -294,6 +298,7 @@ export class StylistRepository {
             });
         }
       }
+      await this.limits.check(tx, userId);
       const row = await tx.stylistJob.create({
         data: {
           id: randomUUID(),

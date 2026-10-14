@@ -1,3 +1,4 @@
+import { AiMeter } from '../usage/ai-meter.service';
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { DatabaseModule } from '../database/database.module';
@@ -25,11 +26,11 @@ import { OpenAiStylistProvider } from './openai-stylist.provider';
     StylistProcessor,
     {
       provide: StylistProvider,
-      inject: [RuntimeConfig],
-      useFactory: (config: RuntimeConfig) =>
+      inject: [RuntimeConfig, AiMeter],
+      useFactory: (config: RuntimeConfig, meter: AiMeter) =>
         config.values.STYLIST_PROVIDER === 'fake'
           ? new FakeStylistProvider()
-          : new OpenAiStylistProvider(config),
+          : new OpenAiStylistProvider(config, meter),
     },
   ],
   exports: [StylistService],

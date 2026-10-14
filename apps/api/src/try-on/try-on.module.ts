@@ -1,10 +1,10 @@
+import { AiMeter } from '../usage/ai-meter.service';
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { DatabaseModule } from '../database/database.module';
 import { QueueModule } from '../queue/queue.module';
 import { MediaModule } from '../media/media.module';
 import { RuntimeConfig } from '../config/runtime-config';
-import { UsageService } from '../usage/usage.service';
 import { TryOnProvider } from './try-on.provider';
 import { OpenAiTryOnProvider } from './openai-try-on.provider';
 import { FakeTryOnProvider } from './fake-try-on.provider';
@@ -27,14 +27,13 @@ import { StylistModule } from '../stylist/stylist.module';
     TryOnRepository,
     TryOnService,
     TryOnProcessor,
-    UsageService,
     {
       provide: TryOnProvider,
-      inject: [RuntimeConfig],
-      useFactory: (config: RuntimeConfig) =>
+      inject: [RuntimeConfig, AiMeter],
+      useFactory: (config: RuntimeConfig, meter: AiMeter) =>
         config.values.TRYON_PROVIDER === 'fake'
           ? new FakeTryOnProvider()
-          : new OpenAiTryOnProvider(config),
+          : new OpenAiTryOnProvider(config, meter),
     },
   ],
 })

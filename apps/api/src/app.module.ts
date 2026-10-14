@@ -9,10 +9,12 @@ import { QueueModule } from './queue/queue.module';
 import { RequestLogMiddleware } from './common/request-log.middleware';
 import { MediaModule } from './media/media.module';
 import { TryOnModule } from './try-on/try-on.module';
+import { UsageModule } from './usage/usage.module';
 
 @Module({
   imports: [
     RuntimeConfigModule,
+    UsageModule,
     AuthModule,
     QueueModule,
     MediaModule,

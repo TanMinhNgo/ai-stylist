@@ -1,3 +1,9 @@
+import { PrivacyProcessor } from '../src/privacy/privacy.processor';
+import { PrivacyService } from '../src/privacy/privacy.service';
+import { RateLimitGuard } from '../src/usage/rate-limit.guard';
+import { UsageService } from '../src/usage/usage.service';
+import { PlanService } from '../src/usage/plan.service';
+import { UsageResponse, AccountDeletionResponse } from '@stylist/shared';
 import { StylistProcessor } from '../src/stylist/stylist.processor';
 import { AssetProcessor } from '../src/garment-assets/asset.processor';
 import { TryOnProcessor } from '../src/try-on/try-on.processor';
@@ -31,6 +37,17 @@ describe('Clerk boundary (HTTP)', () => {
     verifyWebhook: jest.fn(),
   };
   const users = { find: jest.fn(), sync: jest.fn() };
+  const plans = { invalidate: jest.fn().mockResolvedValue(undefined) };
+  const privacy = { request: jest.fn(), status: jest.fn() };
+  const quota = {
+    get: jest.fn().mockResolvedValue({
+      plan: 'free',
+      limit: 5,
+      used: 5,
+      remaining: 0,
+      resetsAt: '2026-11-01T00:00:00Z',
+    }),
+  };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
@@ -38,6 +55,18 @@ describe('Clerk boundary (HTTP)', () => {
       .useValue({ values: {} })
       .overrideProvider(PrismaService)
       .useValue({})
+      .overrideProvider(PrivacyProcessor)
+      .useValue({})
+      .overrideProvider(getQueueToken('privacy'))
+      .useValue({ add: jest.fn() })
+      .overrideProvider(PrivacyService)
+      .useValue(privacy)
+      .overrideProvider(PlanService)
+      .useValue(plans)
+      .overrideProvider(UsageService)
+      .useValue(quota)
+      .overrideGuard(RateLimitGuard)
+      .useValue({ canActivate: () => true })
       .overrideProvider(RedisService)
       .useValue({
         client: {},
@@ -76,6 +105,13 @@ describe('Clerk boundary (HTTP)', () => {
     identity.verifyToken.mockResolvedValue(user.clerkUserId);
     users.find.mockResolvedValue(user);
     users.sync.mockResolvedValue(user);
+    quota.get.mockResolvedValue({
+      plan: 'free',
+      limit: 5,
+      used: 5,
+      remaining: 0,
+      resetsAt: '2026-11-01T00:00:00Z',
+    });
   });
 
   it.each([undefined, 'Basic secret', 'Bearer', 'Bearer x extra'])(
@@ -139,6 +175,61 @@ describe('Clerk boundary (HTTP)', () => {
   it('public health does not require authentication', async () => {
     await request(app.getHttpServer()).get('/health').expect(200);
     expect(identity.verifyToken).not.toHaveBeenCalled();
+  });
+  it('usage is authenticated and uses the verified user, not client plan', async () => {
+    await request(app.getHttpServer()).get('/usage').expect(401);
+    const response = await request(app.getHttpServer())
+      .get('/usage?plan=pro')
+      .set('Authorization', 'Bearer valid')
+      .expect(200);
+    expect(UsageResponse.parse(response.body).remaining).toBe(0);
+    expect(quota.get).toHaveBeenCalledWith(user.id);
+  });
+  it('only deletion routes permit a valid deleted user session to retry/status', async () => {
+    users.find.mockResolvedValue({ ...user, deletedAt: new Date() });
+    const receipt = { deletionId: user.id, status: 'queued' };
+    privacy.request.mockResolvedValue(receipt);
+    privacy.status.mockResolvedValue(receipt);
+    for (let n = 0; n < 2; n++) {
+      const response = await request(app.getHttpServer())
+        .delete('/me')
+        .set('Authorization', 'Bearer valid')
+        .expect(202);
+      expect(AccountDeletionResponse.parse(response.body).deletionId).toBe(
+        user.id,
+      );
+    }
+    await request(app.getHttpServer())
+      .get('/me/deletion')
+      .set('Authorization', 'Bearer valid')
+      .expect(200);
+    await request(app.getHttpServer())
+      .get('/usage')
+      .set('Authorization', 'Bearer valid')
+      .expect(401);
+    await request(app.getHttpServer()).delete('/me').expect(401);
+  });
+  it('verified user billing events invalidate the plan cache; org events do not grant user rights', async () => {
+    plans.invalidate.mockClear();
+    identity.verifyWebhook.mockResolvedValue({
+      type: 'subscriptionItem.canceled',
+      data: { payer: { user_id: 'user_verified' } },
+    });
+    await request(app.getHttpServer())
+      .post('/webhooks/clerk')
+      .send({})
+      .expect(200);
+    expect(plans.invalidate).toHaveBeenCalledWith('user_verified');
+    plans.invalidate.mockClear();
+    identity.verifyWebhook.mockResolvedValue({
+      type: 'subscription.active',
+      data: { payer: { organization_id: 'org_fixture' } },
+    });
+    await request(app.getHttpServer())
+      .post('/webhooks/clerk')
+      .send({})
+      .expect(200);
+    expect(plans.invalidate).not.toHaveBeenCalled();
   });
 
   it('rejects unverified webhooks before touching persistence', async () => {

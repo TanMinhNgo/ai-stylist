@@ -1,3 +1,5 @@
+import { UseGuards } from '@nestjs/common';
+import { RateLimitGuard } from '../usage/rate-limit.guard';
 import { Body, Controller, Get, Headers, Param, Post } from '@nestjs/common';
 import {
   CreateTryOnRequest,
@@ -12,6 +14,7 @@ import { TryOnService } from './try-on.service';
 @Controller('try-on')
 export class TryOnController {
   constructor(private readonly service: TryOnService) {}
+  @UseGuards(RateLimitGuard)
   @Post()
   create(
     @CurrentUser() user: User,

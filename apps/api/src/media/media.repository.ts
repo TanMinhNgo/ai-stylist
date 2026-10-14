@@ -12,6 +12,7 @@ import type {
   ModelPhotoAnalysis,
 } from '@stylist/shared';
 import { EMBEDDING_DIMENSIONS } from '@stylist/shared';
+import { JobLimitsService } from '../usage/job-limits.service';
 
 export type MediaKind = 'model-photo' | 'garment';
 const garmentRelations = {
@@ -25,15 +26,21 @@ const garmentRelations = {
 
 @Injectable()
 export class MediaRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly limits: JobLimitsService,
+  ) {}
   grant(token: string, userId: string) {
     return this.prisma.uploadGrant.findFirst({
       where: { token, userId, user: { deletedAt: null } },
     });
   }
   createGrant(token: string, userId: string, folder: string, expiresAt: Date) {
-    return this.prisma.uploadGrant.create({
-      data: { token, userId, folder, expiresAt },
+    return this.prisma.$transaction(async (tx) => {
+      await this.limits.lock(tx, userId);
+      return tx.uploadGrant.create({
+        data: { token, userId, folder, expiresAt },
+      });
     });
   }
   async register(
@@ -48,6 +55,8 @@ export class MediaRepository {
     },
   ) {
     return this.prisma.$transaction(async (tx) => {
+      await this.limits.lock(tx, userId);
+      await this.limits.check(tx, userId);
       const claimed = await tx.uploadGrant.updateMany({
         where: {
           token,

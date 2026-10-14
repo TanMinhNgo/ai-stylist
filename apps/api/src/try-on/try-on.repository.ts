@@ -14,6 +14,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import type { Prisma } from '../generated/prisma/client';
 import { UsageService } from '../usage/usage.service';
+import { JobLimitsService } from '../usage/job-limits.service';
 import { snapshotOutfit } from '../stylist/snapshot';
 
 const active = {
@@ -25,6 +26,7 @@ export class TryOnRepository {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usage: UsageService,
+    private readonly limits: JobLimitsService,
   ) {}
   find(userId: string, id: string) {
     return this.prisma.tryOnJob.findFirst({
@@ -81,7 +83,7 @@ export class TryOnRepository {
   inputs(userId: string, input: CreateTryOnRequest) {
     return this.inputsFrom(this.prisma, userId, input);
   }
-  create(
+  async create(
     userId: string,
     key: string,
     input: CreateTryOnRequest,
@@ -91,6 +93,19 @@ export class TryOnRepository {
     const requestHash = createHash('sha256')
       .update(JSON.stringify(input))
       .digest('hex');
+    // Receipts remain readable during a billing/cache outage; only new work needs the plan.
+    const receipt = await this.prisma.tryOnJob.findFirst({
+      where: { userId, idempotencyKey: key, user: { deletedAt: null } },
+    });
+    if (receipt) {
+      if (receipt.requestHash !== requestHash)
+        throw new ConflictException({
+          code: 'IDEMPOTENCY_CONFLICT',
+          message: 'Key already used for another request',
+        });
+      return receipt;
+    }
+    const plan = await this.usage.plans.getUserPlan(userId);
     return this.prisma.$transaction(async (tx) => {
       // Serialize submissions per user so concurrent keys reserve exactly once.
       const users = await tx.$queryRaw<
@@ -110,7 +125,8 @@ export class TryOnRepository {
       }
       await this.inputsFrom(tx, userId, input);
       const id = randomUUID();
-      this.usage.reserve(tx, userId, id);
+      await this.limits.check(tx, userId);
+      await this.usage.reserve(tx, userId, id, plan);
       return tx.tryOnJob.create({
         data: {
           id,
@@ -120,6 +136,7 @@ export class TryOnRepository {
           ...input,
           provider,
           imageModel,
+          queuePriority: plan === 'pro' ? 1 : 10,
           deadlineAt: new Date(Date.now() + 15 * 60 * 1000),
         },
       });
@@ -163,6 +180,7 @@ export class TryOnRepository {
   }
   complete(userId: string, id: string) {
     return this.prisma.$transaction(async (tx) => {
+      await this.limits.lock(tx, userId);
       const row = await tx.tryOnJob.findFirst({
         where: { id, userId, ...active },
       });
@@ -185,6 +203,7 @@ export class TryOnRepository {
   }
   fail(userId: string, id: string, errorCode: string) {
     return this.prisma.$transaction(async (tx) => {
+      await this.limits.lock(tx, userId, false);
       const changed = await tx.tryOnJob.updateMany({
         where: {
           id,
@@ -195,7 +214,7 @@ export class TryOnRepository {
         data: { status: 'failed', errorCode, refundedAt: new Date() },
       });
       if (!changed.count) return null;
-      this.usage.refund(tx, userId, id);
+      await this.usage.refund(tx, userId, id);
       return tx.tryOnJob.findUnique({ where: { id } });
     });
   }

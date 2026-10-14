@@ -1,3 +1,6 @@
+import { PrivacyProcessor } from '../src/privacy/privacy.processor';
+import { PrivacyService } from '../src/privacy/privacy.service';
+import { RateLimitGuard } from '../src/usage/rate-limit.guard';
 import { StylistProcessor } from '../src/stylist/stylist.processor';
 import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
@@ -47,6 +50,14 @@ describe('Mannequin asset HTTP contract', () => {
       .useValue(config)
       .overrideProvider(PrismaService)
       .useValue({})
+      .overrideProvider(PrivacyProcessor)
+      .useValue({})
+      .overrideProvider(getQueueToken('privacy'))
+      .useValue({ add: jest.fn() })
+      .overrideProvider(PrivacyService)
+      .useValue({ request: jest.fn().mockResolvedValue({}), status: jest.fn() })
+      .overrideGuard(RateLimitGuard)
+      .useValue({ canActivate: () => true })
       .overrideProvider(RedisService)
       .useValue({
         client: {},

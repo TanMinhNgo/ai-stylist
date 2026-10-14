@@ -1,3 +1,4 @@
+import { AiMeter, metered } from '../usage/ai-meter.service';
 import { Injectable } from '@nestjs/common';
 import OpenAI, { toFile } from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
@@ -27,7 +28,10 @@ export class OpenAiAssetProvider extends AssetProvider {
   get model() {
     return this.config.values.OPENAI_IMAGE_MODEL || '';
   }
-  constructor(private readonly config: RuntimeConfig) {
+  constructor(
+    private readonly config: RuntimeConfig,
+    private readonly meter?: AiMeter,
+  ) {
     super();
   }
   private client() {
@@ -43,21 +47,23 @@ export class OpenAiAssetProvider extends AssetProvider {
     const model = this.config.values.OPENAI_VISION_MODEL;
     if (!model) throw new AssetProviderError('ASSET_PROVIDER_ERROR', true);
     try {
-      const response = await this.client().responses.parse({
-        model,
-        store: false,
-        input: [
-          {
-            role: 'system',
-            content:
-              readFileSync(join(__dirname, 'prompts/ideas-v1.md'), 'utf8') +
-              '\nType catalog: ' +
-              JSON.stringify(GARMENT_TYPES),
-          },
-          { role: 'user', content: JSON.stringify(input) },
-        ],
-        text: { format: zodTextFormat(IdeaProposals, 'proposal') },
-      });
+      const response = await metered(this.meter, 'vision', model, () =>
+        this.client().responses.parse({
+          model,
+          store: false,
+          input: [
+            {
+              role: 'system',
+              content:
+                readFileSync(join(__dirname, 'prompts/ideas-v1.md'), 'utf8') +
+                '\nType catalog: ' +
+                JSON.stringify(GARMENT_TYPES),
+            },
+            { role: 'user', content: JSON.stringify(input) },
+          ],
+          text: { format: zodTextFormat(IdeaProposals, 'proposal') },
+        }),
+      );
       const result = IdeaProposals.parse(response.output_parsed);
       if (
         input.menu !== 'outfit' &&
@@ -73,21 +79,25 @@ export class OpenAiAssetProvider extends AssetProvider {
     const model = this.config.values.OPENAI_VISION_MODEL;
     if (!model) throw new AssetProviderError('ASSET_PROVIDER_ERROR', true);
     try {
-      const response = await this.client().responses.parse({
-        model,
-        store: false,
-        input: [
-          {
-            role: 'system',
-            content: `Inspect a cropped product photo for target type ${type}. Target must be clearly visible and separable. Multiple possible target items or severe cropping is ambiguous. A matching pair of shoes or earrings counts as one item. A worn item is acceptable if only that selected item can be isolated; no child/unsafe/sexualized imagery. Return allowed, targetVisible, ambiguous.`,
-          },
-          {
-            role: 'user',
-            content: [{ type: 'input_image', image_url: url, detail: 'auto' }],
-          },
-        ],
-        text: { format: zodTextFormat(suitability, 'suitability') },
-      });
+      const response = await metered(this.meter, 'vision', model, () =>
+        this.client().responses.parse({
+          model,
+          store: false,
+          input: [
+            {
+              role: 'system',
+              content: `Inspect a cropped product photo for target type ${type}. Target must be clearly visible and separable. Multiple possible target items or severe cropping is ambiguous. A matching pair of shoes or earrings counts as one item. A worn item is acceptable if only that selected item can be isolated; no child/unsafe/sexualized imagery. Return allowed, targetVisible, ambiguous.`,
+            },
+            {
+              role: 'user',
+              content: [
+                { type: 'input_image', image_url: url, detail: 'auto' },
+              ],
+            },
+          ],
+          text: { format: zodTextFormat(suitability, 'suitability') },
+        }),
+      );
       const result = suitability.parse(response.output_parsed);
       if (!result.allowed)
         throw new AssetProviderError('ASSET_CONTENT_REJECTED', true);
@@ -152,9 +162,11 @@ export class OpenAiAssetProvider extends AssetProvider {
     };
     try {
       const client = this.client();
-      const response = reference
-        ? await client.images.edit({ ...params, image: reference })
-        : await client.images.generate(params);
+      const response = await metered(this.meter, 'image', this.model, () =>
+        reference
+          ? client.images.edit({ ...params, image: reference })
+          : client.images.generate(params),
+      );
       const encoded = response.data?.[0]?.b64_json;
       if (!encoded || encoded.length > 28 * 1024 * 1024)
         throw new AssetProviderError('ASSET_INPUT_INVALID');

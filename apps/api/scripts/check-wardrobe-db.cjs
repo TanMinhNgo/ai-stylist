@@ -31,13 +31,16 @@ const tags = {
   try {
     await prisma.$transaction(
       async (tx) => {
-        const repository = new MediaRepository({
-          uploadGrant: tx.uploadGrant,
-          garment: tx.garment,
-          modelPhoto: tx.modelPhoto,
-          $executeRaw: tx.$executeRaw.bind(tx),
-          $transaction: (callback) => callback(tx),
-        });
+        const repository = new MediaRepository(
+          {
+            uploadGrant: tx.uploadGrant,
+            garment: tx.garment,
+            modelPhoto: tx.modelPhoto,
+            $executeRaw: tx.$executeRaw.bind(tx),
+            $transaction: (callback) => callback(tx),
+          },
+          { lock: async () => {}, check: async () => {} },
+        );
         const user = await tx.user.create({
           data: { clerkUserId: `user_db_fixture_${randomUUID()}` },
         });
