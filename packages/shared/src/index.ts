@@ -5,3 +5,4 @@ export * from './wardrobe';
 export * from './try-on';
 export * from './mannequin';
 export * from './stylist';
+export * from './usage';
