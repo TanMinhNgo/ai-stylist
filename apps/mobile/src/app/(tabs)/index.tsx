@@ -40,7 +40,8 @@ export default function StudioScreen() {
   const [demo, setDemo] = useState(false);
   const [tab, setTab] = useState(0);
   const [outfitSection, setOutfitSection] = useState<'formal' | 'casual'>('formal');
-  const [custom, setCustom] = useState(!OCCASIONS.includes(occasion));
+  // Derived, so an occasion set from outside (a stylist suggestion) shows in the custom field.
+  const custom = !OCCASIONS.includes(occasion);
   const tabs = demo ? DEMO_TABS : TABS;
   const current = tabs[Math.min(tab, tabs.length - 1)];
 
@@ -93,6 +94,12 @@ export default function StudioScreen() {
             <Text variant="largeTitle" accessibilityRole="header">Studio</Text>
             <Text variant="callout" color={colors.inkSecondary}>Phối đồ trên người mẫu 3D</Text>
           </View>
+          <Pressable onPress={() => router.push('/suggest')} accessibilityRole="button" accessibilityLabel="Gợi ý cho tôi" hitSlop={6} style={{ marginRight: space.sm }}>
+            <Glass interactive style={styles.suggest}>
+              <Icon ios="sparkles" android="auto_awesome" size={16} color={colors.accent} />
+              <Text variant="footnote" color={colors.accent} style={{ fontWeight: '600' }}>Gợi ý</Text>
+            </Glass>
+          </Pressable>
           <Pressable onPress={() => router.push(modelPhoto ? '/model-photos' : '/photo-guide')} accessibilityRole="button" accessibilityLabel={modelPhoto ? 'Ảnh người mẫu đang dùng' : 'Thêm ảnh người mẫu'} hitSlop={6}>
             <Glass interactive style={styles.avatar}>
               {modelPhoto ? <Image source={{ uri: modelPhoto.thumbnailUrl }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <Icon ios="person.crop.rectangle" android="portrait" size={20} color={colors.accent} />}
@@ -220,10 +227,7 @@ export default function StudioScreen() {
               return (
                 <Pressable
                   key={o}
-                  onPress={() => {
-                    setCustom(o === 'Khác');
-                    setOccasion(o === 'Khác' ? '' : o);
-                  }}
+                  onPress={() => setOccasion(o === 'Khác' ? '' : o)}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: on }}
                   style={[styles.chip, on && { backgroundColor: colors.accent }]}>
@@ -315,6 +319,7 @@ const styles = StyleSheet.create({
   jobBanner: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 44, paddingHorizontal: space.md, borderRadius: radius.md, backgroundColor: 'rgba(255,255,255,0.85)' },
   root: { flex: 1, backgroundColor: colors.studio },
   header: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: space.xl, paddingTop: space.sm, zIndex: 1 },
+  suggest: { height: 46, paddingHorizontal: 14, borderRadius: 23, flexDirection: 'row', alignItems: 'center', gap: 6 },
   avatar: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   stage: { flex: 1, minHeight: 220 },
   stageBar: { position: 'absolute', left: space.xl, right: space.xl, bottom: space.sm, flexDirection: 'row', alignItems: 'center', gap: space.sm },

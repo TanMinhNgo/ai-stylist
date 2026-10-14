@@ -1,12 +1,14 @@
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
 import { useStudio } from '@/features/studio/store';
+import { useOnboardingHydrated, useOnboardingSkip, useStyleProfile } from '@/features/stylist/hooks';
+import { needsOnboarding } from '@/features/stylist/logic';
 import { RequestError } from '@/lib/errors';
 import { colors } from '@/theme';
 
@@ -54,18 +56,39 @@ function RootStack() {
 
   if (!isLoaded) return null;
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}>
-      <Stack.Protected guard={!!isSignedIn}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="photo-guide" />
-        <Stack.Screen name="model-photos" />
-        <Stack.Screen name="garment/[id]" />
-        <Stack.Screen name="add-garment" />
-        <Stack.Screen name="try-on/[jobId]" />
-      </Stack.Protected>
-      <Stack.Protected guard={!isSignedIn}>
-        <Stack.Screen name="(auth)" />
-      </Stack.Protected>
-    </Stack>
+    <>
+      {isSignedIn && userId ? <OnboardingGate key={userId} userId={userId} /> : null}
+      <Stack key={userId ?? 'signed-out'} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}>
+        <Stack.Protected guard={!!isSignedIn}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="photo-guide" />
+          <Stack.Screen name="model-photos" />
+          <Stack.Screen name="garment/[id]" />
+          <Stack.Screen name="add-garment" />
+          <Stack.Screen name="try-on/[jobId]" />
+          <Stack.Screen name="outfit/[id]" />
+          <Stack.Screen name="style-profile" />
+          <Stack.Screen name="onboarding" options={{ presentation: 'modal', gestureEnabled: false }} />
+          <Stack.Screen name="suggest" options={{ presentation: 'modal' }} />
+        </Stack.Protected>
+        <Stack.Protected guard={!isSignedIn}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+      </Stack>
+    </>
   );
+}
+
+/** Opens the style survey once per session for a user with no saved profile who has not skipped it; never blocks the app. */
+function OnboardingGate({ userId }: { userId: string }) {
+  const profile = useStyleProfile();
+  const skipped = useOnboardingSkip((s) => !!s.users[userId]);
+  const hydrated = useOnboardingHydrated();
+  const shown = useRef(false);
+  useEffect(() => {
+    if (!hydrated || shown.current || !needsOnboarding(profile.data, skipped)) return;
+    shown.current = true;
+    router.push('/onboarding');
+  }, [hydrated, profile.data, skipped]);
+  return null;
 }

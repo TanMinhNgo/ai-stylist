@@ -1,11 +1,11 @@
 import { DeleteMediaResponse, ModelPhoto, ModelPhotoListResponse } from '@stylist/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
 
 import { hasPending, MAX_POLLS } from '@/features/media/pages';
 import { request } from '@/lib/api';
+import { secureStorage } from '@/lib/secure-storage';
 
 const KEY = ['model-photos'] as const;
 
@@ -51,11 +51,7 @@ export const useDefaultModelPhoto = create<DefaultPhoto>()(
     }),
     {
       name: 'default-model-photo',
-      storage: createJSONStorage(() => ({
-        getItem: (key) => SecureStore.getItemAsync(key),
-        setItem: (key, value) => SecureStore.setItemAsync(key, value),
-        removeItem: (key) => SecureStore.deleteItemAsync(key),
-      })),
+      storage: secureStorage,
       partialize: (s) => ({ id: s.id }) as DefaultPhoto,
     },
   ),

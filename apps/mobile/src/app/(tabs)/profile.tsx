@@ -48,6 +48,12 @@ export default function ProfileScreen() {
         <Icon ios="chevron.right" android="chevron_right" size={14} color={colors.inkTertiary} />
       </Pressable>
 
+      <Pressable onPress={() => router.push('/style-profile')} accessibilityRole="button" style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.7 }]}>
+        <Icon ios="sparkles" android="auto_awesome" size={20} color={colors.accent} />
+        <Text variant="body" style={{ flex: 1 }}>Hồ sơ style</Text>
+        <Icon ios="chevron.right" android="chevron_right" size={14} color={colors.inkTertiary} />
+      </Pressable>
+
       <Text variant="footnote" color={colors.inkSecondary} style={styles.sectionLabel}>KẾT NỐI MÁY CHỦ</Text>
       <Card>
         {health.isPending ? (

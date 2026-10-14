@@ -12,7 +12,7 @@ export function hasPending(items: readonly Item[] | undefined): boolean {
 }
 
 /** Drop one item from every page, for optimistic deletes. */
-export function removeFromPages<T extends Item>(data: Pages<T> | undefined, id: string): Pages<T> | undefined {
+export function removeFromPages<T extends { id: string }>(data: Pages<T> | undefined, id: string): Pages<T> | undefined {
   if (!data) return data;
   return { ...data, pages: data.pages.map((page) => ({ ...page, items: page.items.filter((item) => item.id !== id) })) };
 }

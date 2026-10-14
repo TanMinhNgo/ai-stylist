@@ -19,6 +19,8 @@ type Studio = {
   wearOutfit: (outfit: DemoOutfit) => void;
   setOccasion: (occasion: string) => void;
   setActiveJob: (job: ActiveJob | null) => void;
+  /** "Thử ngay" from a stylist suggestion: its garments replace the picks, preset cleared, body kept. */
+  applySuggestion: (picks: Picks, occasion: string) => void;
   /** Back to a blank Studio: picks carry the previous user's private asset URLs and job ids. */
   reset: () => void;
 };
@@ -33,5 +35,6 @@ export const useStudio = create<Studio>()((set) => ({
   // Formalwear switches to its designed body; casual pieces keep the current body.
   wearOutfit: (o) => set((s) => ({ body: o.bodyKey ?? s.body, preset: o.preset, picks: Object.fromEntries(o.members.map((w) => [pickKey(w.tags), w])) })),
   setOccasion: (occasion) => set({ occasion }),
+  applySuggestion: (picks, occasion) => set({ picks, preset: null, occasion }),
   reset: () => set(initial),
 }));

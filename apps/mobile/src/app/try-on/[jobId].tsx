@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, ErrorState, Glass, Icon, LoadingState, Text } from '@/components/ui';
 import { useModelPhotos } from '@/features/model-photos/hooks';
 import { useStudio } from '@/features/studio/store';
+import { AdviceSection, PullUpSheet } from '@/features/stylist/components/Advice';
+import { useOutfit, useSaveOutfit } from '@/features/stylist/hooks';
+import { adviceWorking } from '@/features/stylist/logic';
 import { newIdempotencyKey, useCreateTryOn, useTryOnJob } from '@/features/try-on/hooks';
 import { messageFor, RequestError } from '@/lib/errors';
 import { colors, radius, space } from '@/theme';
@@ -45,6 +48,13 @@ export default function TryOnScreen() {
     );
   };
 
+  const actions = (
+    <View style={{ flexDirection: 'row', gap: space.sm }}>
+      <Button label="Tạo lại" variant="plain" onPress={again} loading={create.isPending} disabled={!inputs} style={{ flex: 1 }} />
+      <Button label="Thử đồ khác" onPress={() => router.back()} style={{ flex: 1 }} />
+    </View>
+  );
+
   return (
     <View style={[styles.root, { paddingTop: insets.top + space.sm }]}>
       <View style={styles.topBar}>
@@ -73,7 +83,7 @@ export default function TryOnScreen() {
         <ErrorState error={job.error} onRetry={() => job.refetch()} />
       ) : data?.status === 'done' && data.resultUrl ? (
         <View style={{ flex: 1 }}>
-          <View style={styles.result}>
+          <View style={[styles.result, data.outfitId ? { marginBottom: SHEET_PEEK + insets.bottom } : null]}>
             <Image
               source={{ uri: view === 'before' && before ? before.url : data.resultUrl }}
               style={StyleSheet.absoluteFill}
@@ -90,14 +100,11 @@ export default function TryOnScreen() {
               </View>
             ) : null}
           </View>
-          <View style={[styles.actions, { paddingBottom: insets.bottom + space.md }]}>
-            {/* ponytail: saving to lookbook and stylist advice arrive with BE-04 (outfits API). */}
-            <Text variant="caption" color={colors.inkSecondary} style={styles.center}>Lưu vào lookbook và lời khuyên stylist sẽ có ở bước tiếp theo.</Text>
-            <View style={{ flexDirection: 'row', gap: space.sm }}>
-              <Button label="Tạo lại" variant="plain" onPress={again} loading={create.isPending} disabled={!inputs} style={{ flex: 1 }} />
-              <Button label="Thử đồ khác" onPress={() => router.back()} style={{ flex: 1 }} />
-            </View>
-          </View>
+          {data.outfitId ? (
+            <ResultSheet outfitId={data.outfitId} bottom={insets.bottom} actions={actions} />
+          ) : (
+            <View style={[styles.actions, { paddingBottom: insets.bottom + space.md }]}>{actions}</View>
+          )}
         </View>
       ) : data?.status === 'failed' ? (
         <View style={[styles.waiting, { paddingBottom: insets.bottom + space.lg }]}>
@@ -134,6 +141,39 @@ export default function TryOnScreen() {
         </ScrollView>
       )}
     </View>
+  );
+}
+
+const SHEET_PEEK = 240;
+
+/** Advice for the finished try-on, peeking over the photo; "Lưu vào lookbook" saves the outfit the job created. */
+function ResultSheet({ outfitId, bottom, actions }: { outfitId: string; bottom: number; actions: ReactNode }) {
+  const { outfit, stuck } = useOutfit(outfitId);
+  const save = useSaveOutfit();
+  const o = outfit.data;
+  const preview = o?.advice?.summary ?? (adviceWorking(o?.adviceStatus) ? 'Stylist đang xem bộ đồ của bạn…' : 'Kéo lên để xem hoặc xin lời khuyên');
+  return (
+    <PullUpSheet
+      peek={SHEET_PEEK + bottom}
+      header={
+        <View style={{ gap: 2, paddingBottom: space.sm }}>
+          <Text variant="headline">Lời khuyên stylist</Text>
+          <Text variant="footnote" color={colors.inkSecondary} numberOfLines={2}>{preview}</Text>
+        </View>
+      }
+      footer={
+        <View style={{ gap: space.sm, paddingTop: space.sm, paddingBottom: bottom + space.md }}>
+          {save.isError ? <Text variant="caption" color={colors.danger} style={styles.center}>{messageFor(save.error)}</Text> : null}
+          {o?.savedAt ? (
+            <Button label="Đã lưu · Xem trong lookbook" variant="plain" onPress={() => router.push({ pathname: '/outfit/[id]', params: { id: outfitId } })} icon={<Icon ios="bookmark.fill" android="bookmark" size={16} color={colors.accent} />} />
+          ) : (
+            <Button label="Lưu vào lookbook" variant="ink" disabled={!o} loading={save.isPending} onPress={() => save.mutate({ id: outfitId, saved: true })} icon={<Icon ios="bookmark" android="bookmark" size={16} color="#FFFFFF" />} />
+          )}
+          {actions}
+        </View>
+      }>
+      {outfit.isPending ? <LoadingState /> : outfit.isError ? <ErrorState error={outfit.error} onRetry={() => outfit.refetch()} /> : o ? <AdviceSection outfit={o} stuck={stuck} onRecheck={() => outfit.refetch()} /> : null}
+    </PullUpSheet>
   );
 }
 
