@@ -6,3 +6,7 @@ export * from './try-on';
 export * from './mannequin';
 export * from './stylist';
 export * from './usage';
+export * from './subscription';
+export * from './stylist-usage';
+export * from './collections';
+export * from './wardrobe-planning';
