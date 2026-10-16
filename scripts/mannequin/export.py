@@ -1,7 +1,7 @@
-"""Generate the Studio mannequins into apps/mobile/assets/mannequin.
+"""Generate the Studio bodies into apps/mobile/assets/mannequin.
 
-    pip install numpy scikit-image
-    python scripts/mannequin/export.py
+    pip install numpy
+    python scripts/mannequin/export.py   (first run downloads the pinned MakeHuman CC0 data into .mh-cache)
 
 Per body: <name>.bin = positions int16 (metres * 16000, xyz) | indices uint16 | region uint8 per vertex.
 mannequin.json holds counts, landmarks and the skirt envelope the app needs to dress the body.
@@ -13,7 +13,7 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
-from sculpt import build  # noqa: E402
+from human import build  # noqa: E402
 
 OUT = os.path.join(os.path.dirname(__file__), '..', '..', 'apps', 'mobile', 'assets', 'mannequin')
 

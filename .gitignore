@@ -12,3 +12,4 @@ apps/api/scripts/tryon-spike/outputs/
 
 # Local planning docs, never committed
 packages/docs/
+scripts/mannequin/.mh-cache/
