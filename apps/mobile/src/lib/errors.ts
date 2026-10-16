@@ -65,9 +65,12 @@ const MESSAGES: Record<ClientErrorCode, string> = {
   BAD_RESPONSE: 'Phản hồi từ máy chủ không đúng định dạng.',
 };
 
-// QUOTA_EXCEEDED without a known resource is the try-on quota.
+// QUOTA_EXCEEDED without a known resource is the try-on quota; these caps are not AI or try-on turns.
 const QUOTA_BY_RESOURCE: Record<string, string> = {
   stylist: 'Bạn đã dùng hết lượt tư vấn stylist tháng này. Xem ngày làm mới trong phần hạn mức.',
+  collections: 'Bạn đã có tối đa 50 bộ sưu tập. Xóa bớt một bộ để tạo bộ mới.',
+  planner: 'Lịch đã đủ 730 ngày được lên kế hoạch. Xóa bớt ngày cũ để thêm ngày mới.',
+  wear_history: 'Mỗi ngày chỉ ghi tối đa 5 lần đã mặc.',
 };
 
 export function messageFor(error: unknown): string {
@@ -78,6 +81,7 @@ export function messageFor(error: unknown): string {
   }
   const details = e.details && typeof e.details === 'object' ? (e.details as Record<string, unknown>) : {};
   if (e.code === 'QUOTA_EXCEEDED' && typeof details.resource === 'string' && details.resource in QUOTA_BY_RESOURCE) return QUOTA_BY_RESOURCE[details.resource];
+  if (e.code === 'FORBIDDEN' && typeof details.feature === 'string') return 'Tính năng này chưa có trong gói hiện tại của bạn. Dữ liệu đã lưu vẫn xem và xóa được.';
   return MESSAGES[e.code];
 }
 

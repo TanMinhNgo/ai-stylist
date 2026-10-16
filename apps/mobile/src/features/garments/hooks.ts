@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 
 import { hasPending, MAX_POLLS, removeFromPages } from '@/features/media/pages';
 import { uploadFlowMessage, uploadMedia } from '@/features/media/upload-flow';
+import { invalidatePlanning } from '@/features/planning/hooks';
 import { request } from '@/lib/api';
 import type { LocalImage } from '@/lib/image';
 
@@ -94,6 +95,7 @@ export function useDeleteGarment() {
       return { snapshot };
     },
     onError: (_, __, context) => context?.snapshot.forEach(([key, data]) => client.setQueryData(key, data)),
+    onSuccess: () => invalidatePlanning(client),
     onSettled: () => client.invalidateQueries({ queryKey: KEY }),
   });
 }

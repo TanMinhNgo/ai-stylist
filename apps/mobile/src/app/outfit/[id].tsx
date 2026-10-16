@@ -5,10 +5,12 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, ErrorState, Glass, Icon, LoadingState, Text } from '@/components/ui';
+import { usePutWear } from '@/features/planning/hooks';
+import { deviceTimeZone, localDate } from '@/features/planning/logic';
 import { AdviceSection } from '@/features/stylist/components/Advice';
 import { GarmentChip } from '@/features/stylist/components/GarmentChip';
-import { shareOutfitImage, useDeleteOutfit, useOutfit, useOutfitFeedback, useSaveOutfit, type OutfitItem } from '@/features/stylist/hooks';
-import { messageFor } from '@/lib/errors';
+import { shareOutfitImage, useDeleteOutfit, useHeldKey, useOutfit, useOutfitFeedback, useSaveOutfit, type OutfitItem } from '@/features/stylist/hooks';
+import { messageFor, RequestError } from '@/lib/errors';
 import { colors, radius, space } from '@/theme';
 
 export default function OutfitDetailScreen() {
@@ -114,6 +116,8 @@ function Details({ outfit, stuck, onRecheck }: { outfit: OutfitItem; stuck: bool
         />
       </View>
 
+      <WornToday outfitId={outfit.id} />
+
       <View style={{ gap: space.sm }}>
         <Text variant="headline">Lời khuyên stylist</Text>
         <AdviceSection outfit={outfit} stuck={stuck} onRecheck={onRecheck} />
@@ -130,6 +134,36 @@ function Details({ outfit, stuck, onRecheck }: { outfit: OutfitItem; stuck: bool
 
       <Button label="Xóa outfit" variant="danger" onPress={confirmDelete} loading={remove.isPending} icon={<Icon ios="trash" android="delete" size={18} color={colors.danger} />} />
     </>
+  );
+}
+
+/** An explicit "I wore this" confirmation, the only source of wear counts. One tap = one record: the UUID is kept for the same body until the API answers. */
+function WornToday({ outfitId }: { outfitId: string }) {
+  const wear = usePutWear();
+  const ids = useHeldKey();
+  const [done, setDone] = useState(false);
+  const confirm = () => {
+    const timeZone = deviceTimeZone();
+    const body = { date: localDate(timeZone), timeZone, outfitId };
+    wear.mutate(
+      { id: ids.take(body), body },
+      {
+        onSuccess: () => {
+          ids.settle();
+          setDone(true);
+        },
+        onError: (e) => {
+          ids.settle(e);
+          if (e instanceof RequestError && e.code === 'IDEMPOTENCY_CONFLICT') return setDone(true); // already recorded for today
+          Alert.alert('Chưa ghi được', messageFor(e));
+        },
+      },
+    );
+  };
+  return done ? (
+    <Button label="Đã ghi: mặc hôm nay" variant="plain" disabled icon={<Icon ios="checkmark.circle.fill" android="check_circle" size={18} color={colors.success} />} />
+  ) : (
+    <Button label="Đã mặc hôm nay" variant="plain" onPress={confirm} loading={wear.isPending} icon={<Icon ios="checkmark.circle" android="check_circle" size={18} />} />
   );
 }
 

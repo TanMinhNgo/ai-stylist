@@ -8,6 +8,11 @@ import { useOutfits, type OutfitItem } from '@/features/stylist/hooks';
 import type { LookbookFilter } from '@/features/stylist/logic';
 import { colors, radius, space } from '@/theme';
 
+const LINKS = [
+  ['/collections', 'Bộ sưu tập', 'square.stack', 'collections_bookmark'],
+  ['/planner', 'Kế hoạch tuần', 'calendar', 'calendar_month'],
+  ['/insights', 'Đã mặc', 'chart.bar', 'bar_chart'],
+] as const;
 const FILTERS: [LookbookFilter, string][] = [['all', 'Tất cả'], ['liked', 'Đã thích'], ['disliked', 'Chưa hợp']];
 
 export default function LookbookScreen() {
@@ -32,6 +37,14 @@ export default function LookbookScreen() {
         ListHeaderComponent={
           <View style={{ gap: space.md }}>
             <ScreenHeader title="Lookbook" subtitle="Những bộ đồ bạn đã lưu" />
+            <View style={{ flexDirection: 'row', gap: space.sm }}>
+              {LINKS.map(([href, label, ios, android]) => (
+                <Pressable key={href} onPress={() => router.push(href)} accessibilityRole="button" style={({ pressed }) => [styles.link, pressed && { opacity: 0.7 }]}>
+                  <Icon ios={ios} android={android} size={20} color={colors.accent} />
+                  <Text variant="caption" style={{ fontWeight: '600' }}>{label}</Text>
+                </Pressable>
+              ))}
+            </View>
             <View style={{ flexDirection: 'row', gap: space.sm }}>
               {FILTERS.map(([f, label]) => {
                 const on = f === filter;
@@ -89,6 +102,7 @@ function OutfitCard({ outfit }: { outfit: OutfitItem }) {
 }
 
 const styles = StyleSheet.create({
+  link: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: space.md, borderRadius: radius.md, backgroundColor: colors.surface },
   chip: { height: 36, paddingHorizontal: 16, borderRadius: 18, justifyContent: 'center', backgroundColor: colors.surface },
   chipOn: { backgroundColor: colors.ink },
   card: { flex: 1, maxWidth: '50%', borderRadius: radius.lg, backgroundColor: colors.surface, overflow: 'hidden' },

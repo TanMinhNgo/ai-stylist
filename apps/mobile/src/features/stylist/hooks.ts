@@ -18,6 +18,7 @@ import { persist } from 'zustand/middleware';
 
 import { keyFor, pollDelay, pollGaveUp, type HeldKey } from '@/features/assets/logic';
 import { removeFromPages } from '@/features/media/pages';
+import { invalidatePlanning } from '@/features/planning/hooks';
 import { adviceWorking, applyFeedback, keepKeyAfter, likedParam, type LookbookFilter } from '@/features/stylist/logic';
 import { newIdempotencyKey } from '@/features/try-on/hooks';
 import { USAGE_KEY } from '@/features/usage/hooks';
@@ -130,6 +131,7 @@ export function useDeleteOutfit() {
     onSuccess: (_, id) => {
       client.setQueriesData<OutfitPages>(LISTS, (d) => removeFromPages(d, id) as OutfitPages | undefined);
       client.removeQueries({ queryKey: oneKey(id) });
+      invalidatePlanning(client);
     },
     onSettled: () => client.invalidateQueries(LISTS),
   });

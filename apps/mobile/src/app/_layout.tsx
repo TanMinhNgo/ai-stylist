@@ -72,6 +72,10 @@ function RootStack() {
           <Stack.Screen name="onboarding" options={{ presentation: 'modal', gestureEnabled: false }} />
           <Stack.Screen name="suggest" options={{ presentation: 'modal' }} />
           <Stack.Screen name="quota" />
+          <Stack.Screen name="collections" />
+          <Stack.Screen name="collection/[id]" />
+          <Stack.Screen name="planner" />
+          <Stack.Screen name="insights" />
           <Stack.Screen name="delete-account" />
           <Stack.Screen name="legal" />
         </Stack.Protected>
