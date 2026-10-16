@@ -3,6 +3,7 @@ import type { BodyKey, Garment } from '@stylist/shared';
 import * as THREE from 'three';
 
 import { TYPE_LABEL } from '../garments/labels.ts';
+import { R } from './dress.ts';
 import { lookFor, type Look } from './looks.ts';
 
 type Tags = Parameters<typeof lookFor>[0];
@@ -63,7 +64,30 @@ export function garmentWearable(g: Garment): Wearable | null {
 const ORDER = ['preset', 'shoes', 'bottom', 'dress', 'top', 'belt', 'outer', 'neck', 'jewelry', 'watch', 'bag', 'eyewear', 'hat'];
 
 export type Layer = { key: string; slot: string; type: string; sprite: Sprite };
-export type StagePlan = { looks: Look[]; sprites: Layer[]; mismatched: Wearable[] };
+export type StagePlan = { looks: Look[]; sprites: Layer[]; mismatched: Wearable[]; hidden: number[] };
+
+/**
+ * Body regions a front PNG fully covers. They are left out of the 3D body in front view ("invisible mannequin"),
+ * because a product photo never matches the body's outline exactly and skin would show around it.
+ */
+export function covers(tags: Pick<Tags, 'slot' | 'sleeve' | 'length'>): number[] {
+  const sleeves = tags.sleeve === 'long' || tags.sleeve === 'three_quarter' ? [R.upper, R.fore] : tags.sleeve === 'short' ? [R.upper] : [];
+  const short = tags.length === 'short' || tags.length === 'cropped';
+  const toAnkle = !short && tags.length !== 'midi';
+  switch (tags.slot) {
+    case 'top':
+    case 'outer':
+      return [R.torso, ...sleeves];
+    case 'dress':
+      return [R.torso, R.pelvis, ...(short ? [] : [R.thigh]), ...(tags.length === 'long' || tags.length === 'maxi' ? [R.calf] : []), ...sleeves];
+    case 'bottom':
+      return [R.pelvis, ...(short ? [] : [R.thigh]), ...(toAnkle ? [R.calf] : [])];
+    case 'shoes':
+      return [R.foot];
+    default:
+      return [];
+  }
+}
 
 /**
  * front: pieces with a PNG for this body become sprites and are left off the 3D body (no proxy drawn under them);
@@ -72,19 +96,27 @@ export type StagePlan = { looks: Look[]; sprites: Layer[]; mismatched: Wearable[
 export function stagePlan(picks: Picks, preset: Preset | null, body: BodyKey, view: 'front' | 'orbit'): StagePlan {
   const entries = Object.entries(picks);
   const presetOn = !!preset && view === 'front' && preset.sprite.bodyKeys.includes(body) && entries.filter(([, w]) => w.preset === preset.id).length === preset.size;
-  const plan: StagePlan = { looks: [], sprites: [], mismatched: [] };
+  const plan: StagePlan = { looks: [], sprites: [], mismatched: [], hidden: [] };
+  const hide = new Set<number>();
   if (presetOn) plan.sprites.push({ key: `preset:${preset.id}`, slot: 'preset', type: 'preset', sprite: preset.sprite });
   for (const [key, w] of entries) {
-    if (presetOn && w.preset === preset.id) continue;
+    if (presetOn && w.preset === preset.id) {
+      covers(w.tags).forEach((r) => hide.add(r));
+      continue;
+    }
     const fits = !!w.sprite && w.sprite.bodyKeys.includes(body);
     if (w.sprite && !fits) plan.mismatched.push(w);
-    if (view === 'front' && fits) plan.sprites.push({ key, slot: w.tags.slot, type: w.tags.type, sprite: w.sprite! });
-    else {
+    // Loose shoe PNGs are angled product shots that never sit on the feet; shoes stay 3D on the feet instead.
+    if (view === 'front' && fits && w.tags.slot !== 'shoes') {
+      plan.sprites.push({ key, slot: w.tags.slot, type: w.tags.type, sprite: w.sprite! });
+      covers(w.tags).forEach((r) => hide.add(r));
+    } else {
       const look = lookFor(w.tags);
       if (look) plan.looks.push(look);
     }
   }
   plan.sprites.sort((a, b) => ORDER.indexOf(a.slot) - ORDER.indexOf(b.slot));
+  plan.hidden = [...hide].sort((a, b) => a - b);
   return plan;
 }
 
@@ -106,13 +138,12 @@ const BOX: Record<string, (l: Lm) => Box> = {
   top: (l) => [-(l.wristX + 0.03), l.wristX + 0.03, l.collar + 0.035, l.crotch - 0.03, 'top'],
   outer: (l) => [-(l.wristX + 0.045), l.wristX + 0.045, l.collar + 0.05, l.crotch - 0.06, 'top'],
   dress: (l) => [-(l.wristX + 0.03), l.wristX + 0.03, l.collar + 0.035, l.ankle + 0.02, 'top'],
-  bottom: (l) => [-l.legX * 2.6, l.legX * 2.6, l.waist + 0.02, 0, 'top'],
-  shoes: (l) => [-(l.legX + 0.09), l.legX + 0.09, l.ankle + 0.12, -0.005, 'bottom'],
+  bottom: (l) => [-l.legX * 1.6, l.legX * 1.6, l.waist + 0.02, 0, 'top'],
   bag: (l) => [-l.shoulderX * 0.6, l.handX + 0.08, l.collar, l.hipY - 0.12, 'top'],
   hat: (l) => [-(l.headRx + 0.09), l.headRx + 0.09, l.headY + l.headRy + 0.09, l.headY + l.headRy * 0.25, 'bottom'],
   eyewear: (l) => [-(l.headRx + 0.012), l.headRx + 0.012, l.headY + 0.03, l.headY - 0.03, 'center'],
   neck: (l) => [-0.13, 0.13, l.collar + 0.04, l.bustY - 0.16, 'top'],
-  belt: (l) => [-l.legX * 2.3, l.legX * 2.3, l.waist + 0.05, l.waist - 0.08, 'center'],
+  belt: (l) => [-l.legX * 1.45, l.legX * 1.45, l.waist + 0.05, l.waist - 0.08, 'center'],
   watch: (l) => [-l.wristX - 0.045, -l.wristX + 0.045, l.wrist + 0.03, l.wrist - 0.03, 'center'],
   'jewelry:necklace': (l) => [-0.11, 0.11, l.collar + 0.025, l.bustY - 0.06, 'top'],
   'jewelry:earrings': (l) => [-(l.headRx + 0.01), l.headRx + 0.01, l.headY - 0.01, l.headY - l.headRy - 0.08, 'top'],

@@ -4,9 +4,47 @@ import * as THREE from 'three';
 import type { Look } from './looks';
 import type { Body } from './scene';
 
-const R = { head: 0, torso: 1, upper: 2, fore: 3, hand: 4, pelvis: 5, thigh: 6, calf: 7, foot: 8 } as const;
+export const R = { head: 0, torso: 1, upper: 2, fore: 3, hand: 4, pelvis: 5, thigh: 6, calf: 7, foot: 8, eye: 10, iris: 11 } as const;
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+const smooth = (a: number, b: number, x: number) => {
+  const t = clamp01((x - a) / (b - a));
+  return t * t * (3 - 2 * t);
+};
+
+/** Short hair as 0..1 per vertex around the head centre; soft edges give a natural hairline instead of mesh steps. */
+function hairMask(m: Body) {
+  const { lm, pos, reg } = m;
+  const cy = lm.hairTop - 0.11, cz = lm.faceFront - 0.1;
+  const mask = new Float32Array(m.n);
+  for (let i = 0; i < m.n; i++) {
+    if (reg[i] !== R.head || pos[i * 3 + 1] < lm.neck) continue;
+    const ax = Math.abs(pos[i * 3]), dy = pos[i * 3 + 1] - cy, dz = pos[i * 3 + 2] - cz;
+    const crown = smooth(0.022, 0.045, dy);
+    const back = smooth(-0.004, -0.026, dz) * smooth(lm.nape - 0.018, lm.nape + 0.004, dy);
+    const side = smooth(0.046, 0.06, ax) * smooth(0.012, -0.01, dz) * smooth(0.0, 0.022, dy);
+    mask[i] = Math.max(crown, back, side);
+  }
+  return mask;
+}
+
+function hairGeo(m: Body) {
+  const mask = hairMask(m);
+  const pos = new Float32Array(m.n * 3), col = new Float32Array(m.n * 4).fill(1);
+  for (let i = 0; i < m.n; i++) {
+    const e = 0.0015 + 0.007 * mask[i];
+    for (let k = 0; k < 3; k++) pos[i * 3 + k] = m.pos[i * 3 + k] + m.nrm[i * 3 + k] * e;
+    col[i * 4 + 3] = mask[i];
+  }
+  const index: number[] = [];
+  for (let t = 0; t < m.idx.length; t += 3) if (mask[m.idx[t]] + mask[m.idx[t + 1]] + mask[m.idx[t + 2]] > 0.02) index.push(m.idx[t], m.idx[t + 1], m.idx[t + 2]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 4));
+  g.setIndex(index);
+  g.computeVertexNormals();
+  return g;
+}
 
 /** Triangles whose 3 vertices pass keep(i), pushed out along the body normal by ease (metres or per vertex). */
 function part(m: Body, keep: (i: number) => boolean, ease: number | ((i: number) => number)) {
@@ -100,7 +138,7 @@ export function contactShadow() {
 }
 
 /** Rebuilds `fig` as the body wearing `looks`. Previous children are disposed except the shared skin material. */
-export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Material) {
+export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Material, hidden: number[] = []) {
   for (const o of [...fig.children] as THREE.Mesh[]) {
     fig.remove(o);
     o.geometry.dispose();
@@ -115,13 +153,18 @@ export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Mate
     fig.add(o);
     return o;
   };
-  const cloth = (color: string, roughness = 0.8) => new THREE.MeshStandardMaterial({ color, roughness, side: THREE.DoubleSide });
+  // Same fabric as the design: physical sheen gives cloth its soft rim instead of a plastic look.
+  const cloth = (color: string, roughness = 0.8) => new THREE.MeshPhysicalMaterial({ color, roughness, sheen: 0.8, sheenRoughness: 0.7, sheenColor: new THREE.Color(0.35, 0.35, 0.35), side: THREE.DoubleSide });
   const metal = (color: string) => new THREE.MeshStandardMaterial({ color, metalness: 0.9, roughness: 0.3 });
   const tube = (pts: number[][], r: number, mat: THREE.Material) =>
     add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p[0], p[1], p[2]))), 64, r, 8, false), mat);
   const get = <P extends Look['part']>(p: P) => looks.find((l) => l.part === p) as Extract<Look, { part: P }> | undefined;
 
-  add(part(m, () => true, 0), skin);
+  // MakeHuman body (scripts/mannequin/human.py). Regions under a front PNG are left out (see outfit.ts covers).
+  add(part(m, (i) => reg[i] < R.eye && !hidden.includes(reg[i]), 0), skin);
+  add(hairGeo(m), new THREE.MeshPhysicalMaterial({ color: '#1F1A17', roughness: 0.55, sheen: 0.6, sheenRoughness: 0.4, sheenColor: new THREE.Color('#5a4a40'), vertexColors: true, transparent: true }));
+  add(part(m, (i) => reg[i] === R.eye, 0), new THREE.MeshStandardMaterial({ color: '#F2EEE8', roughness: 0.2 }));
+  add(part(m, (i) => reg[i] === R.iris, 0), new THREE.MeshStandardMaterial({ color: '#2A1D16', roughness: 0.15 }));
   add(new THREE.CylinderGeometry(0.21, 0.22, 0.012, 64), new THREE.MeshStandardMaterial({ color: '#2A2A2E', roughness: 0.35, metalness: 0.4 }), 0, -0.006, 0);
 
   const skirtHem = { mini: lm.crotch - 0.07 * H, midi: lm.knee - 0.05 * H, maxi: lm.ankle + 0.035 * H, aodai: lm.ankle + 0.1 * H, knee: lm.knee - 0.02 * H };
@@ -168,6 +211,12 @@ export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Mate
 
   const dressLook = get('dress'), top = get('top'), outer = get('outer');
   const bottom = (get('pants') ?? get('skirt')) as Extract<Look, { part: 'pants' | 'skirt' }> | undefined;
+  // Neutral base layer so the realistic body is never shown bare where nothing is worn.
+  const base = cloth('#B7B1AA', 0.85);
+  if (!dressLook && !bottom && !hidden.includes(R.pelvis))
+    add(part(m, (i) => (reg[i] === R.pelvis || (reg[i] === R.thigh && Y(i) > lm.crotch - 0.03)) && Y(i) < lm.hipY + 0.05, 0.003), base);
+  if (lm.female && !dressLook && !top && !outer && !hidden.includes(R.torso))
+    add(part(m, (i) => reg[i] === R.torso && Y(i) > lm.bustY - 0.06 && Y(i) < lm.bustY + 0.045, 0.004), base);
   if (dressLook) {
     shell({ color: dressLook.color, sleeve: dressLook.sleeve, neck: dressLook.aodai ? 'mandarin' : dressLook.sleeve === 'none' ? 'scoop' : 'crew', rough: 0.5 }, 0.007, lm.waist - 0.03 * H);
     if (dressLook.jump !== 'no') pants(dressLook.color, dressLook.jump === 'shorts' ? 'shorts' : 'full', 0.03, 0.012);

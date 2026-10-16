@@ -12,7 +12,7 @@ import { spriteRect, stagePlan, studioCamera, type Picks, type Preset } from '@/
 import { loadBody } from '@/features/studio/scene';
 import { colors } from '@/theme';
 
-type Stage = { renderer: THREE.WebGLRenderer; fig: THREE.Group; skin: THREE.MeshStandardMaterial; raf: number };
+type Stage = { renderer: THREE.WebGLRenderer; fig: THREE.Group; skin: THREE.MeshPhysicalMaterial; raf: number };
 type Props = { body: BodyKey; picks: Picks; preset: Preset | null; skin: string; onSpriteError?: () => void; style?: StyleProp<ViewStyle> };
 
 /**
@@ -28,6 +28,23 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  const fail = (e: unknown) => {
+    console.warn('[Mannequin3D]', e);
+    setFailed(true);
+  };
+  const retry = () => {
+    if (stage.current) {
+      cancelAnimationFrame(stage.current.raf);
+      stage.current.renderer.dispose();
+      stage.current = null;
+    }
+    setReady(false);
+    setLoaded(false);
+    setFailed(false);
+    setAttempt((a) => a + 1);
+  };
 
   // Proxies stay on until the turn back to front has finished, so the body never flashes bare.
   const front = view === 'front' && settled;
@@ -72,7 +89,9 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
       const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
       // three expects a canvas; expo-gl only gives a context, so hand it the minimum it touches.
       const canvas = { width: w, height: h, style: {}, clientWidth: w, clientHeight: h, addEventListener: () => {}, removeEventListener: () => {}, getContext: () => gl };
-      const renderer = new THREE.WebGLRenderer({ canvas: canvas as unknown as HTMLCanvasElement, context: gl, antialias: true });
+      // No `context:` — expo-gl's WebGL2 context is `instanceof WebGLRenderingContext`, which three (r163+) rejects as WebGL 1.
+      // three then asks canvas.getContext('webgl2'), which hands back the same gl.
+      const renderer = new THREE.WebGLRenderer({ canvas: canvas as unknown as HTMLCanvasElement, antialias: true, alpha: true });
       renderer.setPixelRatio(1);
       renderer.setSize(w, h, false);
       renderer.setClearColor(0x000000, 0);
@@ -80,18 +99,23 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
 
       const scene = new THREE.Scene();
       const camera = studioCamera(w / h);
-      scene.add(new THREE.HemisphereLight(0xffffff, 0xcfc8bc, 1.1));
-      const key = new THREE.DirectionalLight(0xfff6ec, 1.8);
+      // The design lights with a PMREM room (bright ceiling, warm right panel, cool left back panel). PMREM needs float
+      // render targets this GPU lacks (no EXT_color_buffer_float), so each panel becomes a light in the same place.
+      scene.add(new THREE.HemisphereLight(0xfffaf4, 0x77736e, 1.0));
+      const key = new THREE.DirectionalLight(0xfff6ec, 1.5);
       key.position.set(2.2, 4, 3);
       scene.add(key);
-      const rim = new THREE.DirectionalLight(0xdfe6ff, 0.7);
-      rim.position.set(-3, 2.5, -2);
-      scene.add(rim);
+      const warm = new THREE.DirectionalLight(0xffe2c4, 0.55);
+      warm.position.set(4.5, 1.2, 2.5);
+      scene.add(warm);
+      const cool = new THREE.DirectionalLight(0xc4d2ff, 0.45);
+      cool.position.set(-4.5, 1.5, -2.5);
+      scene.add(cool);
       scene.add(contactShadow());
 
       const fig = new THREE.Group();
       scene.add(fig);
-      const skinMat = new THREE.MeshStandardMaterial({ color: skin, roughness: 0.5 });
+      const skinMat = new THREE.MeshPhysicalMaterial({ color: skin, roughness: 0.45, clearcoat: 0.15, clearcoatRoughness: 0.5, sheen: 0.3, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffe2d0') });
       stage.current = { renderer, fig, skin: skinMat, raf: 0 };
 
       const loop = () => {
@@ -110,8 +134,8 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
       };
       loop();
       setReady(true);
-    } catch {
-      setFailed(true);
+    } catch (e) {
+      fail(e);
     }
   }
 
@@ -121,14 +145,14 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
     loadBody(body)
       .then((m) => {
         if (!alive || !stage.current) return;
-        dress(stage.current.fig, m, plan.looks, stage.current.skin);
+        dress(stage.current.fig, m, plan.looks, stage.current.skin, plan.hidden);
         setLoaded(true);
       })
-      .catch(() => alive && setFailed(true));
+      .catch((e) => alive && fail(e));
     return () => {
       alive = false;
     };
-  }, [ready, body, plan.looks]);
+  }, [ready, body, plan.looks, plan.hidden]);
 
   useEffect(() => {
     stage.current?.skin.color.set(skin);
@@ -153,11 +177,14 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
     <View style={style} onLayout={(e) => setSize(e.nativeEvent.layout)} {...pan.panHandlers}>
       {failed ? (
         <View style={styles.center}>
-          <Text variant="callout" color={colors.inkSecondary}>Thiết bị không hiển thị được 3D</Text>
+          <Text variant="callout" color={colors.inkSecondary}>Chưa hiển thị được người mẫu 3D</Text>
+          <Pressable onPress={retry} accessibilityRole="button" hitSlop={8}>
+            <Text variant="callout" color={colors.accent} style={{ fontWeight: '600' }}>Thử lại</Text>
+          </Pressable>
         </View>
       ) : (
         <>
-          <GLView style={StyleSheet.absoluteFill} onContextCreate={onContextCreate} accessible accessibilityRole="image" accessibilityLabel={view === 'front' ? 'Người mẫu nhìn chính diện mặc đồ đang chọn' : 'Người mẫu 3D mô phỏng, kéo ngang để xoay'} />
+          <GLView key={attempt} style={StyleSheet.absoluteFill} onContextCreate={onContextCreate} accessible accessibilityRole="image" accessibilityLabel={view === 'front' ? 'Người mẫu nhìn chính diện mặc đồ đang chọn' : 'Người mẫu 3D mô phỏng, kéo ngang để xoay'} />
           {showSprites
             ? plan.sprites.map((layer) => (
                 <Image key={layer.key} source={layer.sprite.source} style={[styles.sprite, spriteRect(layer, lm, size!, camera!)]} contentFit="contain" pointerEvents="none" onError={onSpriteError} />
@@ -188,7 +215,7 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
 }
 
 const styles = StyleSheet.create({
-  center: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
+  center: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', gap: 8 },
   sprite: { position: 'absolute' },
   badgeRow: { position: 'absolute', top: 6, right: 16, alignItems: 'flex-end', gap: 6 },
   badge: { height: 30, paddingHorizontal: 12, borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 6 },

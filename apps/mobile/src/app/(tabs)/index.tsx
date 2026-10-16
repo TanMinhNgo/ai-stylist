@@ -32,7 +32,7 @@ const TABS: { label: string; slots: GarmentSlot[] }[] = [
   { label: 'Phụ kiện', slots: ['hat', 'eyewear', 'neck', 'belt', 'jewelry', 'watch'] },
 ];
 const OCCASIONS = ['Đi làm', 'Đi chơi', 'Tiệc', 'Hẹn hò'];
-const SKIN = { light: '#EBCFB8', medium: '#C9976F', dark: '#8A5A3E', unknown: '#ECE8E2' } as const;
+const SKIN = { light: '#EBCFB8', medium: '#C9976F', dark: '#8A5A3E', unknown: '#EBCFB8' } as const; // unknown = the design's default "Sáng" tone
 
 const DEMO_TABS = [{ label: 'Bộ phối sẵn', slots: [] as GarmentSlot[] }, ...TABS];
 
@@ -121,7 +121,7 @@ export default function StudioScreen() {
             skin={skin}
             // Signed PNG URLs last 15 minutes; refetch the wardrobe for fresh ones.
             onSpriteError={() => void client.invalidateQueries({ queryKey: ['garments'] })}
-            style={StyleSheet.absoluteFill}
+            style={styles.figure}
           />
           <View style={styles.stageBar} pointerEvents="box-none">
             <Glass style={styles.segment}>
@@ -331,6 +331,8 @@ const styles = StyleSheet.create({
   suggest: { height: 46, paddingHorizontal: 14, borderRadius: 23, flexDirection: 'row', alignItems: 'center', gap: 6 },
   avatar: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   stage: { flex: 1, minHeight: 220 },
+  // Ends above the Nữ/Nam bar (36pt + its bottom gap) so the bar never covers the feet.
+  figure: { ...StyleSheet.absoluteFill, bottom: 36 + space.sm * 2 },
   stageBar: { position: 'absolute', left: space.xl, right: space.xl, bottom: space.sm, flexDirection: 'row', alignItems: 'center', gap: space.sm },
   segment: { flexDirection: 'row', padding: 3, borderRadius: radius.pill },
   segmentItem: { height: 30, paddingHorizontal: 14, borderRadius: radius.pill, justifyContent: 'center' },

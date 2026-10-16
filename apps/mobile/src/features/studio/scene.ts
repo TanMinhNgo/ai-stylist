@@ -14,7 +14,8 @@ export type Body = { n: number; H: number; pos: Float32Array; idx: Uint16Array; 
 const cache = new Map<BodyKey, Promise<Body>>();
 
 export function loadBody(key: BodyKey): Promise<Body> {
-  if (!cache.has(key)) cache.set(key, readBody(key));
+  // A failed read is not cached, so one bad load (e.g. Metro/network blip) does not break 3D until restart.
+  if (!cache.has(key)) cache.set(key, readBody(key).catch((e) => { cache.delete(key); throw e; }));
   return cache.get(key)!;
 }
 

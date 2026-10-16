@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 
-import { pickKey, spriteRect, stagePlan, studioCamera, togglePick } from '../src/features/studio/outfit.ts';
+import { covers, pickKey, spriteRect, stagePlan, studioCamera, togglePick } from '../src/features/studio/outfit.ts';
 
 const meta = JSON.parse(readFileSync(new URL('../assets/mannequin/mannequin.json', import.meta.url)));
 const manifest = JSON.parse(readFileSync(new URL('../assets/wardrobe/manifest.json', import.meta.url)));
@@ -85,4 +85,19 @@ test('sprites keep their aspect and land on the body landmarks for each body', (
     assert.ok(Math.abs(mid - view.width / 2) < 1e-6);
   }
   assert.ok(rects.m.top < rects.f.top, 'taller male body puts the collar higher');
+});
+
+test('front PNGs hide only the body they fully cover; orbit hides nothing', () => {
+  // regions: 1 torso, 2 upper arm, 3 forearm, 5 pelvis, 6 thigh, 7 calf, 8 foot
+  assert.deepEqual(covers({ slot: 'top', sleeve: 'short', length: null }), [1, 2]);
+  assert.deepEqual(covers({ slot: 'bottom', sleeve: null, length: 'short' }), [5]);
+  assert.deepEqual(covers({ slot: 'bottom', sleeve: null, length: 'midi' }), [5, 6]);
+  assert.deepEqual(covers({ slot: 'bottom', sleeve: null, length: 'long' }), [5, 6, 7]);
+  assert.deepEqual(covers({ slot: 'hat', sleeve: null, length: null }), []);
+  const sprite = { source: 1, width: 10, height: 10, bounds: [0, 0, 10, 10], bodyKeys: ['m'] };
+  const tags = { category: 'top', type: 'shirt', slot: 'top', colors: ['navy'], length: null, sleeve: 'long', fit: 'regular' };
+  const picks = { top: { id: 'a', label: 'a', tags, garmentId: null, tryOnAllowed: false, sprite } };
+  assert.deepEqual(stagePlan(picks, null, 'm', 'front').hidden, [1, 2, 3]);
+  assert.deepEqual(stagePlan(picks, null, 'm', 'orbit').hidden, []);
+  assert.deepEqual(stagePlan(picks, null, 'f', 'front').hidden, [], 'a PNG for the other body is a proxy, body stays');
 });
