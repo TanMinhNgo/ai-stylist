@@ -58,7 +58,7 @@ function RootStack() {
   if (!isLoaded) return null;
   return (
     <>
-      {isSignedIn && userId ? <OnboardingGate key={userId} userId={userId} /> : null}
+      {isSignedIn && userId ? <OnboardingGate key={`gate-${userId}`} userId={userId} /> : null}
       <Stack key={userId ?? 'signed-out'} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}>
         <Stack.Protected guard={!!isSignedIn}>
           <Stack.Screen name="(tabs)" />

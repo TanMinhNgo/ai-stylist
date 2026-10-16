@@ -14,6 +14,10 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+// One sign-out for a burst of 401s; Clerk rejects ("You are signed out") when the session already ended server-side.
+let signingOut: Promise<void> | null = null;
+const signOutOnce = () => (signingOut ??= getClerkInstance().signOut().catch(() => {}).finally(() => (signingOut = null)));
+
 export type Schema<T> ={ safeParse(data: unknown): { success: true; data: T } | { success: false } };
 
 /** Call the API and parse the body with its @stylist/shared schema; every failure becomes a RequestError. */
@@ -25,7 +29,7 @@ export async function request<T>(schema: Schema<T>, config: AxiosRequestConfig):
     const failure = toRequestError(error);
     // Only a token the API rejected means the session is dead; a request sent without one does not.
     const sentToken = axios.isAxiosError(error) && !!error.config?.headers?.Authorization;
-    if (failure.code === 'UNAUTHORIZED' && sentToken) void getClerkInstance().signOut();
+    if (failure.code === 'UNAUTHORIZED' && sentToken) void signOutOnce();
     throw failure;
   }
   const parsed = schema.safeParse(data);
