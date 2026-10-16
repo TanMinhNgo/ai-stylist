@@ -10,7 +10,7 @@ import { GarmentChip } from '@/features/stylist/components/GarmentChip';
 import { OCCASION_OPTIONS } from '@/features/stylist/components/ProfileFields';
 import { fetchGarments, useHeldKey, useStylistJob, useSuggest } from '@/features/stylist/hooks';
 import { jobUnsettled, suggestionPicks } from '@/features/stylist/logic';
-import { messageFor } from '@/lib/errors';
+import { messageFor, stylistJobMessage } from '@/lib/errors';
 import { colors, radius, space, type } from '@/theme';
 
 /** "Gợi ý cho tôi": up to 3 outfits from the user's wardrobe for an occasion; "Thử ngay" fills Studio (no try-on, no AI call). */
@@ -102,7 +102,7 @@ export default function SuggestScreen() {
         ) : job.isError ? (
           <Text variant="callout" color={colors.danger}>{messageFor(job.error)}</Text>
         ) : status === 'failed' ? (
-          <Text variant="callout" color={colors.inkSecondary}>Stylist chưa gợi ý được lần này. Bấm "Gợi ý cho tôi" để thử lại.</Text>
+          <Text variant="callout" color={colors.inkSecondary}>{stylistJobMessage(job.data?.errorCode) ?? 'Stylist chưa gợi ý được lần này. Bấm "Gợi ý cho tôi" để thử lại.'}</Text>
         ) : null}
 
         {result ? (

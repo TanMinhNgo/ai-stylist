@@ -85,7 +85,7 @@ export default function ProfileScreen() {
           }
         }}
       />
-      <Card><UsageNotice /></Card>
+      <Card><UsageNotice /><Button label="Gói và quyền lợi" variant="plain" onPress={() => router.push('/quota')} /></Card>
       <Button label="Điều khoản sử dụng · bản dự thảo" variant="plain" onPress={() => router.push({ pathname: '/legal', params: { kind: 'terms' } })} />
       <Button label="Quyền riêng tư · bản dự thảo" variant="plain" onPress={() => router.push({ pathname: '/legal', params: { kind: 'privacy' } })} />
       <Button label="Xóa tài khoản" variant="danger" onPress={() => router.push('/delete-account')} />

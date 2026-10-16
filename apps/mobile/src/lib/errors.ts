@@ -65,11 +65,23 @@ const MESSAGES: Record<ClientErrorCode, string> = {
   BAD_RESPONSE: 'Phản hồi từ máy chủ không đúng định dạng.',
 };
 
+// QUOTA_EXCEEDED without a known resource is the try-on quota.
+const QUOTA_BY_RESOURCE: Record<string, string> = {
+  stylist: 'Bạn đã dùng hết lượt tư vấn stylist tháng này. Xem ngày làm mới trong phần hạn mức.',
+};
+
 export function messageFor(error: unknown): string {
   const e = toRequestError(error);
   if (e.code === 'RATE_LIMITED' && e.details && typeof e.details === 'object' && 'retryAfterSeconds' in e.details) {
     const seconds = e.details.retryAfterSeconds;
     if (typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0) return `Chờ khoảng ${Math.ceil(seconds)} giây rồi thử lại.`;
   }
+  const details = e.details && typeof e.details === 'object' ? (e.details as Record<string, unknown>) : {};
+  if (e.code === 'QUOTA_EXCEEDED' && typeof details.resource === 'string' && details.resource in QUOTA_BY_RESOURCE) return QUOTA_BY_RESOURCE[details.resource];
   return MESSAGES[e.code];
+}
+
+/** Stylist jobs only carry an errorCode; QUOTA_EXCEEDED there is always the stylist quota. */
+export function stylistJobMessage(code: ErrorCode | null | undefined) {
+  return code === 'QUOTA_EXCEEDED' ? messageFor(new RequestError(code, 429, { resource: 'stylist' })) : null;
 }

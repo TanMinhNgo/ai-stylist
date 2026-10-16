@@ -20,6 +20,7 @@ import { keyFor, pollDelay, pollGaveUp, type HeldKey } from '@/features/assets/l
 import { removeFromPages } from '@/features/media/pages';
 import { adviceWorking, applyFeedback, keepKeyAfter, likedParam, type LookbookFilter } from '@/features/stylist/logic';
 import { newIdempotencyKey } from '@/features/try-on/hooks';
+import { USAGE_KEY } from '@/features/usage/hooks';
 import { request } from '@/lib/api';
 import { RequestError } from '@/lib/errors';
 import { secureStorage } from '@/lib/secure-storage';
@@ -149,18 +150,22 @@ export function useHeldKey() {
 }
 
 export function useRequestAdvice() {
+  const client = useQueryClient();
   return useMutation({
     mutationFn: ({ outfitId, key }: { outfitId: string; key: string }) =>
       request(CreateStylistJobResponse, { url: `/outfits/${outfitId}/advice`, method: 'POST', headers: { 'Idempotency-Key': key } }),
     retry,
+    onSettled: () => client.invalidateQueries({ queryKey: USAGE_KEY }),
   });
 }
 
 export function useSuggest() {
+  const client = useQueryClient();
   return useMutation({
     mutationFn: ({ occasion, key }: { occasion: string; key: string }) =>
       request(CreateStylistJobResponse, { url: '/stylist/suggest', method: 'POST', data: { occasion }, headers: { 'Idempotency-Key': key } }),
     retry,
+    onSettled: () => client.invalidateQueries({ queryKey: USAGE_KEY }),
   });
 }
 
@@ -176,7 +181,9 @@ export function useStylistJob(id: string | null) {
   });
   const { status, outfitId } = job.data ?? {};
   useEffect(() => {
-    if ((status === 'ready' || status === 'failed') && outfitId) void client.invalidateQueries({ queryKey: oneKey(outfitId) });
+    if (status !== 'ready' && status !== 'failed') return;
+    void client.invalidateQueries({ queryKey: USAGE_KEY });
+    if (outfitId) void client.invalidateQueries({ queryKey: oneKey(outfitId) });
   }, [status, outfitId, client]);
   const state = client.getQueryState(queryKey);
   return { job, stuck: pollGaveUp(status, (state?.dataUpdateCount ?? 0) + (state?.errorUpdateCount ?? 0)) };

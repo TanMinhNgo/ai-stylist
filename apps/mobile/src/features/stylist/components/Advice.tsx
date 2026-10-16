@@ -6,7 +6,7 @@ import { Button, Icon, Text } from '@/components/ui';
 import { colorHex } from '@/features/studio/looks';
 import { useHeldKey, useRequestAdvice, useStylistJob, type OutfitItem } from '@/features/stylist/hooks';
 import { adviceWorking, jobUnsettled } from '@/features/stylist/logic';
-import { messageFor } from '@/lib/errors';
+import { messageFor, stylistJobMessage } from '@/lib/errors';
 import { colors, radius, space } from '@/theme';
 
 /**
@@ -40,6 +40,8 @@ export function AdviceSection({ outfit, stuck, onRecheck }: { outfit: OutfitItem
   return (
     <View style={{ gap: space.lg }}>
       {outfit.advice ? <AdviceBody advice={outfit.advice} mock={outfit.adviceIsMock} /> : null}
+      {/* The stored level, which may differ from the current plan after an upgrade/downgrade. */}
+      {outfit.advice && outfit.promptVersion?.endsWith('-basic') ? <Text variant="caption" color={colors.inkSecondary}>Bản tư vấn cơ bản: nhận xét chung và điểm cộng của bộ đồ.</Text> : null}
       {working ? (
         <View style={styles.status} accessibilityLiveRegion="polite">
           <ActivityIndicator color={colors.accent} />
@@ -50,7 +52,7 @@ export function AdviceSection({ outfit, stuck, onRecheck }: { outfit: OutfitItem
         <View style={{ gap: space.sm }}>
           {failed ? (
             <Text variant="callout" color={colors.inkSecondary}>
-              {outfit.advice ? 'Lần xin tư vấn mới chưa thành công, đang giữ lời khuyên trước đó.' : 'Stylist chưa trả lời được lần này. Bạn có thể xin lại.'}
+              {stylistJobMessage(job.data?.errorCode ?? outfit.adviceErrorCode) ?? (outfit.advice ? 'Lần xin tư vấn mới chưa thành công, đang giữ lời khuyên trước đó.' : 'Stylist chưa trả lời được lần này. Bạn có thể xin lại.')}
             </Text>
           ) : (
             <Text variant="callout" color={colors.inkSecondary}>Chưa có lời khuyên cho bộ đồ này.</Text>
