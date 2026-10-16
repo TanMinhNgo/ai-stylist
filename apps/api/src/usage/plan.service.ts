@@ -69,6 +69,7 @@ export class PlanService {
     private readonly source: PlanSource,
     private readonly redis: RedisService,
     private readonly prisma: PrismaService,
+    private readonly config: RuntimeConfig,
   ) {}
   private version(clerkId: string) {
     return `stylist:plan-version:${clerkId}`;
@@ -81,6 +82,7 @@ export class PlanService {
       where: { id: userId, deletedAt: null },
     });
     if (!user) throw new NotFoundException();
+    if (this.config.values.CLERK_BILLING_ENABLED === 'false') return 'free';
     const revision =
       (await redisCommand(
         this.redis.client.get(this.version(user.clerkUserId)),

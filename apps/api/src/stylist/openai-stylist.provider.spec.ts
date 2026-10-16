@@ -61,4 +61,26 @@ describe('Structured stylist output', () => {
     ).rejects.toThrow();
     expect(parse).toHaveBeenCalledTimes(1);
   });
+  it.each(['basic', 'advanced'] as const)(
+    'puts the trusted %s level and matching output constraints in the system request',
+    async (adviceLevel) => {
+      parse.mockResolvedValue({ output_parsed: advice });
+      await provider.advice(
+        { ...context, adviceLevel },
+        'https://example.com/private',
+      );
+      const request = (parse.mock.calls as unknown[][])[0][0] as {
+        input: { content: unknown }[];
+        text: {
+          format: {
+            schema: { properties: Record<string, { maxItems: number }> };
+          };
+        };
+      };
+      expect(request.input[0].content).toContain(`ADVICE_LEVEL=${adviceLevel}`);
+      expect(request.text.format.schema.properties.accessories.maxItems).toBe(
+        adviceLevel === 'basic' ? 0 : 4,
+      );
+    },
+  );
 });

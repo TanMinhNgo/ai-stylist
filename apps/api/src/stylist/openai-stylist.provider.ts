@@ -5,7 +5,11 @@ import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { StylistAdvice, SuggestOutput } from '@stylist/shared';
+import {
+  StylistAdvice,
+  BasicStylistAdvice,
+  SuggestOutput,
+} from '@stylist/shared';
 import { RuntimeConfig } from '../config/runtime-config';
 import { StylistProvider, StylistContext } from './stylist.provider';
 @Injectable()
@@ -43,11 +47,13 @@ export class OpenAiStylistProvider extends StylistProvider {
       )
       .join('\n');
     const prompt =
-      readFileSync(join(__dirname, 'prompts/stylist-v1.md'), 'utf8') +
+      readFileSync(join(__dirname, 'prompts/stylist-v2.md'), 'utf8') +
       '\n' +
       kind +
       '\n' +
-      knowledge;
+      knowledge +
+      '\nADVICE_LEVEL=' +
+      (context.adviceLevel ?? 'basic');
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const response = await metered(this.meter, 'stylist', this.model, () =>
@@ -83,7 +89,12 @@ export class OpenAiStylistProvider extends StylistProvider {
     throw new Error('Stylist output invalid');
   }
   advice(context: StylistContext, imageUrl: string) {
-    return this.generate(context, StylistAdvice, 'ADVICE', imageUrl);
+    return this.generate(
+      context,
+      context.adviceLevel === 'advanced' ? StylistAdvice : BasicStylistAdvice,
+      'ADVICE',
+      imageUrl,
+    );
   }
   suggest(context: StylistContext) {
     return this.generate(context, SuggestOutput, 'SUGGEST');

@@ -189,7 +189,7 @@ Redis phải sẵn sàng trước khi khởi tạo BullMQ. Nếu log báo public
 
 ## BE-05: quota, billing và quyền riêng tư
 
-`GET /usage` yêu cầu session: `{plan,limit,used,remaining,resetsAt}`. Hạn mức tháng UTC chỉ dành cho try-on, mặc định thử nghiệm Free5/Plus50/Pro200, điều chỉnh qua USAGE_*_LIMIT. Ledger `-1` được ghi cùng transaction tạo job dưới khóa user; `+1` chỉ ghi một lần nếu job thất bại, tham chiếu tháng reserve kể cả refund sang tháng sau. Auto advice không trừ thêm lượt try-on; mannequin quota ngày vẫn riêng. Job cũ trước migration chưa có debit không nhận credit miễn phí.
+`GET /usage` yêu cầu session: `{plan,limit,used,remaining,resetsAt}`. Hạn mức tháng UTC chỉ dành cho try-on, mặc định hiện tại Free5/Plus20/Pro60 từ BE-06.1 (trước đó5/50/200), điều chỉnh qua USAGE_*_LIMIT. Ledger `-1` được ghi cùng transaction tạo job dưới khóa user; `+1` chỉ ghi một lần nếu job thất bại, tham chiếu tháng reserve kể cả refund sang tháng sau. Auto advice không trừ thêm lượt try-on; mannequin quota ngày vẫn riêng. Job cũ trước migration chưa có debit không nhận credit miễn phí.
 
 PlanSource đọc subscription bằng Clerk backend SDK, cache Redis tối đa60giây; item canceled chỉ còn quyền tới periodEnd, upcoming/past_due/ended không mở quyền. Webhook subscription/subscriptionItem chỉ invalidate sau verify Svix; version cache tránh stale fill sau invalidation. Chưa bật Clerk Billing thì CLERK_BILLING_ENABLED=false dùng Free. Khi bật cần slug đúng, webhook Billing và gói thật được kiểm chứng. Client không gửi plan; Pro dùng priority1, job khác10. Receipt cùng key vẫn trả job cũ nếu Billing/cache gặp sự cố.
 
@@ -204,3 +204,96 @@ Purge chờ worker leases hoàn thành và chữ ký upload đã cấp hết h�
 WorkLease bao phủ worker đến hết checkpoint/upload, heartbeat1phút, lease crash hết hạn20phút. AiCall ghi từng SDKcall (vision/embedding/image/stylist), usage và estimatedUsd. AI_COST_RATES_JSON là bảng giá theo model, input/output USD/1triệu token; thiếu usage/giá hoặc thất bại receipt mơ hồ = null/unknown, không phải miễn phí. Giá ảnh/token có thể cần rate tổng hợp riêng theo cấu hình hiện tại; chưa hiệu chuẩn chi phí USD, chưa mở bán gói. Telemetry lỗi không bỏ kết quả đã trả phí để gọi AI lại.
 
 Sau build, `node scripts/report-ai-costs.cjs YYYY-MM-DD [userUUID]` tại apps/api thống kê UTC theo user/job, tối đa1000 hàng, không in prompt/URL/email/token. `node scripts/check-usage-live.cjs` kiểm tra Neon/Redis/ImageKit thật với fake identity/billing/AI, dispatch trong bộ nhớ; fixture được dọn. Bao gồm race lượt cuối, refund lặp/qua tháng, Propriority giả, rateLua, concurrency cap, purge đợi worker/upload/failedstorage/orphan/tombstone. Không kiểm chứng vận chuyển BullMQ/privacy job thực hoặc xóa Clerk thật bằng script này.
+
+`node scripts/check-privacy-queue-live.cjs` (từ `apps/api`, sau build) kiểm tra riêng privacy qua BullMQ thật trên Redis, Neon và ImageKit hiện cấu hình. Script dùng namespace hàng đợi ngẫu nhiên, chỉ tạo/xóa user và ảnh fixture; không chạy worker AI hoặc xóa tài khoản Clerk thật. Kiểm tra receipt HTTP202/idempotency, job tồn tại qua khởi động lại worker, lease/upload grant chặn purge, lỗi storage rồi recovery sweep, xóa ảnh đã tham chiếu/orphan, cách ly user khác, tombstone, replay và payload sai. Chỉ thời điểm retry/expiry của fixture được tiến lên để tránh chờ nhiều phút; không chứng minh thời gian chờ thực tế, Clerk session/deletion hoặc paid billing. Không chạy đồng thời với build vì script đọc `dist`; cuối lượt dọn fixture và namespace riêng, không xóa queue ứng dụng.
+
+Kiểm kê orphan dùng `path : "/stylist/{userId}/" AND type = "file"`. Toán tử `:` đã bao gồm thư mục con; thêm `*` làm truy vấn trả rỗng dù còn ảnh. Khi dùng `searchQuery`, lọc `type` phải nằm trong truy vấn để loại folder. Mỗi lượt lấy tối đa100 file, purge xóa batch rồi kiểm kê lại và defer nếu còn. Xem [ImageKit: toán tử tìm kiếm và path](https://imagekit.io/docs/api-reference/digital-asset-management-dam/list-and-search-assets#supported-parameters).
+
+Inventory ImageKit trong live smoke có độ trễ sau upload/delete. Script đợi ảnh fixture xuất hiện trước khi bắt đầu, chạy startup sweep một lần rồi drive recovery sweep chủ động; chỉ kết luận xóa file sau khi đọc theo ID trả404. Kết quả này không bảo đảm inventory thấy ngay upload có receipt mơ hồ hoặc lịch chạy/độ trễ production. Clerk thật, CDN/provider retention và chi phí USD vẫn cần nghiệm thu riêng.
+
+## BE-06.1: quyền gói và quota
+
+Quota mặc định hiện là **Free5/Plus20/Pro60**, cấu hình bằng USAGE_*_LIMIT; `.env.example` đã cập nhật, `.env` local chỉ đổi hai con số Plus/Pro và giữ `CLERK_BILLING_ENABLED=false`. Đây là giới hạn thử nghiệm nội bộ, không xác nhận giá hoặc tổng chi phí AI đã phù hợp để mở bán. Ledger không reset khi đổi gói: downgrade có thể để used lớn hơn limit, remaining về0 và chặn job mới; refund vẫn về tháng reserve ban đầu.
+
+`GET /usage/entitlements` yêu cầu Bearer session, user lấy từ token; không nhận plan/feature/userId từ client. Schema `EntitlementsResponse` trong shared trả:
+
+```json
+{
+  "plan": "plus",
+  "includedFeatures": ["digital_wardrobe", "ai_styling", "personal_lookbook", "monthly_try_on_20", "advanced_outfit_advice", "accessory_recommendations", "occasion_collections"],
+  "availableFeatures": ["digital_wardrobe", "ai_styling", "personal_lookbook", "monthly_try_on_20", "advanced_outfit_advice", "accessory_recommendations", "occasion_collections"],
+  "tryOn": { "limit": 20, "period": "calendar_month_utc", "resetsAt": "2026-11-01T00:00:00.000Z" }
+}
+```
+
+`includedFeatures` là quyền lợi mục tiêu của plan; **`availableFeatures` xác nhận backend đã triển khai**. Plus/Pro có advanced advice/phụ kiện và occasion_collections; Pro có planner/insights từ6.4–6.5 và priority_queue. Mobile cần tích hợp từng contract riêng. Nếu override quota khác số catalog, feature monthly_try_on tương ứng không nằm trong availableFeatures; đọc tryOn.limit hoặc GET/usage cho số lượt thực. GET/usage giữ nguyên strict response cũ, không thêm field làm hỏng mobile hiện có.
+
+`UsageService.requireFeature(userId, feature)` dùng cùng policy, từ chối bằng FORBIDDEN403 với details `{feature,reason:not_included|not_available}`; create/edit collections, planner và insights sử dụng helper này. Chu kỳ quota AI vẫn **tháng lịch UTC**, độc lập ngày gia hạn Clerk; client phải hiển thị resetsAt, không hứa reset theo ngày thu tiền. Ngày planner/wear là ngày local do request ghi rõ timezone, không dùng chu kỳ quota này.
+
+Shared `PLAN_FEATURES` và `PLAN_TRY_ON_LIMITS` là policy; `CLERK_FEATURE_SLUGS` ánh xạ mã API tiếng Anh sang12slug tiếng Việt đã tạo trong Clerk. Không đổi slug trên Clerk hoặc tin feature client gửi. PlanSource vẫn đọc subscription đã xác thực phía server, cache tối đa60giây và invalidate qua webhook Svix. Bật Billing là thao tác cấu hình riêng sau nghiệm thu quyền thật/chi phí; không suy quyền trả phí từ việc plan catalog tồn tại.
+
+Khi Billing tắt, PlanService trảFree sau kiểm tra user còn hoạt động và bỏ qua cache paid/nguồn subscription; cachePro cũ không thể mở lại quyền. Trong check-usage-live.cjs, riêng tiến trình fixture đặt Billing=true để kiểm tra luân chuyển plan nhưng thay toàn bộ PlanSource bằng fake; không bật Billing trong .env hoặc đọc subscription trả phí thật.
+
+Sau build, `node scripts/check-usage-live.cjs` còn kiểm tra read-only catalog Clerk thật và mapping12feature, upgrade/downgrade trên Neon/Redis, entitlements, quota và purge fixture. Identity/subscription vẫn fake, dispatch trong bộ nhớ; grant/retry timestamp chỉ tiến cho fixture. Script không mua gói, không đổi Clerk, không gọi AI. Inventory có thể cập nhật trễ nên script đợi thấy fixture và đợi metadata404 sau purge.
+
+## BE-06.4–6.5: planner, xác nhận đã mặc và insights
+
+Migration `202610170007_planner_wear` thêm2bảng/index/FK; local đã apply, môi trường khác chạy migrate deploy trước sử dụng. Không có AI/queue hoặc ảnh mới trong các route này. Mọi route yêu cầu Bearer và shared schema strict.
+
+| Method | Route | Input | Quyền |
+|---|---|---|---|
+| GET | /planner/week | query `{startDate,timeZone}` | Mọi gói, dữ liệu của mình |
+| PUT | /planner/days/:date | `{timeZone,occasion,outfitId:uuid|null}` | Pro |
+| DELETE | /planner/days/:date | query `{timeZone}` | Mọi gói |
+| PUT | /wear-history/:id | `{date,timeZone,outfitId}` | Mọi gói |
+| GET | /wear-history | query `{from,to}` | Mọi gói |
+| DELETE | /wear-history/:id | UUID | Mọi gói |
+| GET | /wardrobe/insights | query `{from,to}` | Pro |
+
+Ngày YYYY-MM-DD thật, timezone IANA/UTC được canonicalize, không nhận offset tự do. Planner trả đủ7slot liên tiếp từ startDate; Pro ghi từ hôm nay đến365ngày tới theo timezone, cap730slot/user. PUT cùng user/timezone/date thay slot, không nhân bản; xóa slot idempotent. Slot trống, slot chưa chọn outfit và slot thiếu outfit/garment được phân biệt bằng isPlanned/outfitId/outfitUnavailable. Hết Pro vẫn xem/xóa archive. Không ép ngày bắt đầu tuần hoặc chuyển ngày khi đổi timezone.
+
+Nút “Đã mặc” phải là xác nhận riêng, không tự kích hoạt từ try-on/save/like/planner. UUID wear do client tạo và giữ nguyên khi retry. Cùng ID/body trả receipt cũ; khác body hoặc khác UUID nhưng cùng outfit/ngày trả409. Cho ghi hôm nay hoặc365ngày trước, tối đa5record/ngày/user; từ lúc ghi giữ snapshot tối đa4garment IDs. Xóa outfit setnull tham chiếu nhưng giữ lịch sử xác nhận; xóa wear record sẽ thay đổi thống kê. Xóa record rồi PUT lại là xác nhận mới có chủ đích.
+
+History và insights theo kỳ bao gồm hai đầu <=366ngày (history tối đa1830record). Insights chỉ dựa vào xác nhận, không suy từ lượt click:0record trả insufficient_data; món0lượt nghĩa chưa có ghi nhận trong kỳ. Chỉ đếm garment hiện ready/chưa xóa; top/least tối đa10/phần, gợi ý tối đa3outfit saved sẵn trong200bộ gần nhất còn đầy đủ đồ. Không sinh outfit/ảnh hoặc dùng LLM.
+
+Schemas/fields/error đầy đủ tại `packages/docs/CONTRACT_CHANGES.md`, mục planner-wear-insights. Quota dữ liệu429 có resource planner (730) hoặc wear_history (5), không phải hết lượt AI. Foreign/missing outfit hoặc garment404, schema/date400, thiếu Pro403. User row lock và composite FK bảo vệ ownership/cap/tombstone; purge xóa hai bảng mới trước outfit.
+
+## BE-06.6: bằng chứng nghiệm thu
+
+Sau build: chạy check-stylist-live.cjs (bao gồm planner/history/insights), check-privacy-queue-live.cjs và check-usage-live.cjs tại apps/api. Chỉ dùng user/ảnh fixture, identity/plan/AI fake; Neon/Redis/ImageKit và Clerk catalog là thật. Không chạy cùng build đang xóa dist. Sau khi fixture đã cleanup, `node scripts/report-phase6-readiness.cjs` đọc catalog/subscription của tối đa20active account, tổng AiCall/cost và inventory, không in user ID/secret/prompt hoặc mua gói. Output giữ paidReleaseAccepted=false: evidence read-only không thay thế giao dịch thực/webhook delivery, economics hoặc nghiệm thu thiết bị. Snapshot và tiêu chí còn thiếu ở `packages/docs/roadmap/phase-06-acceptance.md`.
+
+## BE-06.3: bộ sưu tập theo dịp
+
+Chạy `npm run db:migrate -w api` trước API trên môi trường mới; migration202610160006_collections chỉ thêm2bảng/index/FK, không reset dữ liệu cũ. Local Neon đã apply và đối chiếu counts trước/sau. Collections không gọi AI hoặc sao chép ảnh.
+
+| Method | Endpoint | Body/query | Response |
+|---|---|---|---|
+| POST | /collections | `{name,occasion,outfitIds?:uuid[]}` | 201 CollectionResponse |
+| GET | /collections | `limit=20&cursor=uuid` | CollectionListResponse |
+| GET | /collections/:id | UUID | CollectionResponse |
+| PATCH | /collections/:id | `{name?,occasion?,outfitIds?}` | CollectionResponse |
+| DELETE | /collections/:id | UUID | `{deleted:true}` |
+
+Bearer Clerk bắt buộc; user lấy từ token. Plus/Pro có `occasion_collections` để tạo/sửa; sau downgrade vẫn đọc/list/xóa archive. Schema strict trong shared: tên trim1..80, dịp trim1..120, tối đa50collection/user và50UUID outfit khác nhau/collection; PATCH phải có ít nhất1trường. Gửi outfitIds thay toàn bộ danh sách (`[]` làm rỗng), không gửi thì giữ nguyên. Outfit phải cùng owner và chưa xóa, không bắt buộc savedAt. Không tự save/unsave outfit. POST mỗi lần tạo mới, không có receipt idempotency; tránh tự retry khi chưa đối chiếu danh sách sau mất mạng.
+
+CollectionResponse là `{id,name,occasion,outfitIds,createdAt,updatedAt}`; List là `{items,nextCursor}`. UUID outfit tăng dần, không hứa thứ tự nhập. List theo createdAt DESC/id DESC, limit1..50; cursor phải thuộc owner. URL/detail ảnh đọc qua GET/outfits/:id hiện có, không có ảnh bản sao trong collection. Xóa collection giữ outfit/ảnh; xóa outfit tự bỏ link, client cần invalidate collections. Composite FK scope user và khóa User bảo vệ liên kết/limit/tombstone; purge account xóa collection và memberships trước outfit.
+
+Lỗi:400validation/unknown fields/duplicate/empty patch;401auth;403FORBIDDEN khi create/edit thiếu feature;404collection/cursor/outfit lạ, foreign hoặc deleted;429QUOTA_EXCEEDED details `{resource:"collections",limit:50}`. Sai một outfit rollback toàn bộ mutation. Không trừ quota try-on/stylist.
+
+Kiểm tra sau build: check-stylist-live.cjs thêm CRUD/gate/downgrade/ownership/composite FK/atomicity/cursor/cap race/unlink trên Neon/ImageKit thật với identity/plan/AI fake; check-privacy-queue-live.cjs thêm collection/membership vào purge qua BullMQ thật và giữ collection user khác. Không dùng paid subscription thật hoặc nghiệm thu mobile qua các smoke này. Contract FE xem packages/docs/CONTRACT_CHANGES.md, chưa thay frontend.
+
+## BE-06.2: tư vấn theo gói và quota stylist
+
+`GET /stylist/usage` (Bearer) trả `StylistUsageResponse` riêng, ví dụ:
+
+```json
+{"plan":"free","adviceLevel":"basic","limit":10,"used":2,"remaining":8,"period":"calendar_month_utc","resetsAt":"2026-11-01T00:00:00.000Z"}
+```
+
+Cap bảo vệ tạm **Free10/Plus60/Pro180 job/tháng UTC**, dùng chung advice tự động sau try-on, POST `/outfits/:id/advice` và POST `/stylist/suggest`. Đây là lượt tư vấn riêng, không trừ quota try-on; chưa hiệu chuẩn theo chi phí, chưa dùng làm cam kết mở bán. Job queued/processing/ready giữ lượt. Failed trước begin giải phóng; sau marker startedAt giữ lượt kể cả lỗi context/provider/receipt mơ hồ. Provider có thể retry lỗi schema một lần trong cùng job, không retry mạng. Không replay job đã started sau crash. Không xóa receipt để hoàn quota; xóa outfit vẫn giữ lịch sử tính lượt.
+
+Các endpoint advice cũ giữ toàn bộ field/request/response. **Hành vi mới:** Free có summary, tối đa2 strengths và occasionFit; adjustments/accessories là `[]`. Plus/Pro có phân tích màu/tỷ lệ trang phục/dịp và gợi ý phụ kiện từ prompt/schema nâng cao. Backend chọn mức từ PlanService trước enqueue và kiểm tra lại trước worker begin; client không gửi level/plan để mở quyền. Downgrade job đang chờ thì basic, upgrade không tự nâng job basic cũ. Job legacy thiếu level chạy basic. Kết quả ghi `promptVersion=stylist-v2-basic|stylist-v2-advanced`; advice đã lưu vẫn đọc sau downgrade. Knowledge/model/key giữ cấu hình hiện có.
+
+Admission và begin dùng khóa User, cùng tháng createdAt của receipt kể cả khi worker qua đầu tháng. Cùng key/payload trả receipt cũ kể cả đầy quota; payload khác vẫn409. Hết cap trước tạo job trả429 `QUOTA_EXCEEDED`, details `{resource:"stylist"}`. Nếu worker bị chặn do cap sau downgrade thì receipt failed/errorCode=QUOTA_EXCEEDED và chưa có startedAt. Auto advice lỗi/quota giữ ảnh try-on. Plan cache tối đa60giây và webhook invalidation giữ nguyên6.1.
+
+Sau build, `node scripts/check-stylist-live.cjs` kiểm tra Neon/ImageKit thật, identity/plan/AI fake và dispatch trong bộ nhớ: Free/Plus/Pro cho kết quả mock khác nhau, downgrade trước worker, giữ dữ liệu paid đã lưu, foreign owner, race lượt cuối, giải phóng trước begin, lỗi mơ hồ vẫn tính một lần, replay khi đầy cap và chặn worker khi hạ gói. Script chỉ dọn fixture của nó, không gọi OpenAI trả phí. Kiểm thử prompt/schema bằng mock không chứng minh chất lượng phân tích ảnh thật hoặc tổng chi phí; paid subscription/webhook và mobile/thiết bị vẫn cần nghiệm thu riêng.

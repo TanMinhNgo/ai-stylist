@@ -27,6 +27,9 @@ model User {
   deletion       AccountDeletion?
   workLeases     WorkLease[]
   aiCalls        AiCall[]
+  collections    OutfitCollection[]
+  plannerDays    PlannerDay[]
+  wearRecords    WearRecord[]
 
   @@map("users")
 }
@@ -215,12 +218,73 @@ model Outfit {
   adviceKnowledgeVersion String? @map("advice_knowledge_version")
   adviceProvider String? @map("advice_provider")
   stylistJobs    StylistJob[]
+  collectionItems CollectionOutfit[]
+  plannerDays    PlannerDay[]
+  wearRecords    WearRecord[]
   savedAt        DateTime? @map("saved_at") @db.Timestamptz(3)
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   user           User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   tryOnJob       TryOnJob @relation(fields: [tryOnJobId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   @@index([userId, createdAt])
   @@map("outfits")
+  @@unique([userId, id])
+}
+
+model OutfitCollection {
+  id        String @id @default(uuid()) @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+  name      String @db.VarChar(80)
+  occasion  String @db.VarChar(120)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user      User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  items     CollectionOutfit[]
+  @@unique([userId, id])
+  @@index([userId, createdAt, id])
+  @@map("outfit_collections")
+}
+
+model CollectionOutfit {
+  collectionId String @map("collection_id") @db.Uuid
+  outfitId String @map("outfit_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  collection OutfitCollection @relation(fields: [userId, collectionId], references: [userId, id], onDelete: Cascade, onUpdate: NoAction)
+  outfit Outfit @relation(fields: [userId, outfitId], references: [userId, id], onDelete: Cascade, onUpdate: NoAction)
+  @@id([collectionId, outfitId])
+  @@index([userId, outfitId])
+  @@map("collection_outfits")
+}
+
+model PlannerDay {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  date DateTime @db.Date
+  timeZone String @map("time_zone") @db.VarChar(100)
+  occasion String @db.VarChar(120)
+  outfitId String? @map("outfit_id") @db.Uuid
+  outfitUnavailable Boolean @default(false) @map("outfit_unavailable")
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  outfit Outfit? @relation(fields: [userId, outfitId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+  @@unique([userId, timeZone, date])
+  @@index([userId, outfitId])
+  @@map("planner_days")
+}
+
+model WearRecord {
+  id String @id @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  date DateTime @db.Date
+  timeZone String @map("time_zone") @db.VarChar(100)
+  outfitId String? @map("outfit_id") @db.Uuid
+  garmentIds String[] @map("garment_ids") @db.Uuid
+  requestHash String @map("request_hash")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  outfit Outfit? @relation(fields: [userId, outfitId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+  @@unique([userId, date, outfitId])
+  @@index([userId, date])
+  @@index([userId, outfitId])
+  @@map("wear_records")
 }
 
 model StyleProfile {

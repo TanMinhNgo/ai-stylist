@@ -21,6 +21,7 @@ const { StylistProcessor } = require('../dist/stylist/stylist.processor');
 const { StylistRepository } = require('../dist/stylist/stylist.repository');
 const { StylistService } = require('../dist/stylist/stylist.service');
 const { StylistProvider } = require('../dist/stylist/stylist.provider');
+const { PlanService } = require('../dist/usage/plan.service');
 const {
   ImageStorageProvider,
 } = require('../dist/uploads/image-storage.provider');
@@ -31,6 +32,13 @@ const {
   Outfit,
   OutfitListResponse,
   StylistJobResponse,
+  StylistUsageResponse,
+  CollectionResponse,
+  CollectionListResponse,
+  PlannerWeekResponse,
+  WearRecordResponse,
+  WearHistoryResponse,
+  WardrobeInsightsResponse,
 } = require('@stylist/shared');
 const { PrismaClient } = require('../dist/generated/prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
@@ -53,6 +61,7 @@ const tags = {
 let stage = 'bootstrap';
 (async () => {
   let app, db, storage;
+  let plan = 'free';
   const users = [],
     files = [],
     outfits = [],
@@ -63,6 +72,8 @@ let stage = 'bootstrap';
   const queue = { add: async () => ({}) };
   try {
     const builder = Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(PlanService)
+      .useValue({ getUserPlan: async () => plan })
       .overrideProvider(RedisService)
       .useValue({
         client: {},
@@ -76,7 +87,7 @@ let stage = 'bootstrap';
       .overrideGuard(RateLimitGuard)
       .useValue({ canActivate: () => true })
       .overrideProvider(JobLimitsService)
-      .useValue({ lock: async () => {}, check: async () => {} })
+      .useValue({ lock: JobLimitsService.prototype.lock, check: async () => {} })
       .overrideProvider(IdentityProvider)
       .useValue({
         verifyToken: async (token) =>
@@ -208,6 +219,109 @@ let stage = 'bootstrap';
       outfits.push(o);
       await snapshotOutfit(db, userId, o.id, ids);
     }
+    stage = 'collections/ownership/atomicity';
+    const collectionBody = { name: 'Đi làm', occasion: 'Văn phòng', outfitIds: [outfits[0].id, outfits[1].id] };
+    assert.equal((await call('/collections', 'POST', collectionBody)).status, 403);
+    plan = 'plus';
+    const created = await call('/collections', 'POST', collectionBody);
+    assert.equal(created.status, 201);
+    const collection = CollectionResponse.parse(created.body);
+    assert.equal(collection.outfitIds.length, 2);
+    assert.equal((await call(`/collections/${collection.id}`, 'GET', undefined, 'other')).status, 404);
+    assert.equal((await call(`/collections/${collection.id}`, 'PATCH', { name: 'Intrusion' }, 'other')).status, 404);
+    assert.equal((await call(`/collections/${collection.id}`, 'DELETE', undefined, 'other')).status, 404);
+    const foreignCollection = await call('/collections', 'POST', { name: 'Other', occasion: 'Casual' }, 'other');
+    assert.equal(foreignCollection.status, 201);
+    assert.equal((await call(`/collections/${foreignCollection.body.id}`, 'PATCH', { outfitIds: [outfits[0].id] }, 'other')).status, 404);
+    // Composite foreign keys reject cross-user links even if a caller bypasses the repository.
+    await assert.rejects(db.collectionOutfit.create({ data: { userId: users[1].id, collectionId: foreignCollection.body.id, outfitId: outfits[0].id } }), error => error.code === 'P2003');
+    assert.equal((await call(`/collections/${collection.id}`, 'PATCH', { name: 'Must roll back', outfitIds: [randomUUID()] })).status, 404);
+    assert.equal((await call(`/collections/${collection.id}`)).body.name, collectionBody.name);
+    assert.deepEqual((await call(`/collections/${collection.id}`)).body.outfitIds.sort(), collection.outfitIds.sort());
+    assert.equal((await call('/collections', 'POST', { ...collectionBody, userId: users[1].id })).status, 400);
+    assert.equal((await call('/collections?userId=attacker')).status, 400);
+    const empty = await call('/collections', 'POST', { name: 'Trống', occasion: 'Cuối tuần' });
+    const firstPage = CollectionListResponse.parse((await call('/collections?limit=1')).body);
+    assert.equal(firstPage.items.length, 1);
+    assert.ok(firstPage.nextCursor);
+    const secondPage = CollectionListResponse.parse((await call(`/collections?limit=1&cursor=${firstPage.nextCursor}`)).body);
+    assert.notEqual(firstPage.items[0].id, secondPage.items[0].id);
+    assert.equal((await call(`/collections?cursor=${foreignCollection.body.id}`)).status, 404);
+    plan = 'free';
+    assert.equal((await call(`/collections/${collection.id}`)).status, 200);
+    assert.equal((await call(`/collections/${collection.id}`, 'PATCH', { name: 'Blocked' })).status, 403);
+    assert.equal((await call(`/collections/${empty.body.id}`, 'DELETE')).status, 200);
+    assert.ok(await db.outfit.findUnique({ where: { id: outfits[0].id } }));
+    plan = 'pro';
+    assert.equal((await call(`/collections/${collection.id}`, 'PATCH', { occasion: 'Đi họp' })).status, 200);
+    // Forty-nine owned collections leave one slot; real User row lock admits one race winner.
+    await db.outfitCollection.createMany({ data: Array.from({ length: 48 }, () => ({ id: randomUUID(), userId, name: 'Cap fixture', occasion: 'Test' })) });
+    const collectionRace = await Promise.all([0, 1].map(n => call('/collections', 'POST', { name: `Race ${n}`, occasion: 'Test' })));
+    assert.equal(collectionRace.filter(r => r.status === 201).length, 1);
+    assert.equal(collectionRace.filter(r => r.status === 429 && r.body.details.resource === 'collections').length, 1);
+    await db.outfitCollection.deleteMany({ where: { userId, id: { not: collection.id } } });
+    plan = 'free';
+    stage = 'planner/week/wear/insights';
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const weekPath = `/planner/week?startDate=${today}&timeZone=UTC`;
+    const periodPath = `from=${yesterday}&to=${today}`;
+    const dayBody = { timeZone: 'UTC', occasion: 'Đi làm', outfitId: outfits[0].id };
+    assert.equal((await call(`/planner/days/${today}`, 'PUT', dayBody)).status, 403);
+    assert.equal((await call(`/wardrobe/insights?${periodPath}`)).status, 403);
+    plan = 'pro';
+    let stats = WardrobeInsightsResponse.parse((await call(`/wardrobe/insights?${periodPath}`)).body);
+    assert.equal(stats.status, 'insufficient_data');
+    assert.equal(stats.confirmedRecords, 0);
+    for (let n = 0; n < 7; n++) {
+      const date = new Date(new Date(today).getTime() + n * 86400000).toISOString().slice(0, 10);
+      assert.equal((await call(`/planner/days/${date}`, 'PUT', { ...dayBody, outfitId: n === 6 ? null : outfits[n % 3].id })).status, 200);
+    }
+    let week = PlannerWeekResponse.parse((await call(weekPath)).body);
+    assert.equal(week.days.filter(d => d.isPlanned).length, 7);
+    assert.equal(week.days[6].outfitId, null);
+    assert.equal((await call(weekPath, 'GET', undefined, 'other')).body.days.some(d => d.isPlanned), false);
+    assert.equal((await call(`/planner/days/${today}`, 'PUT', dayBody, 'other')).status, 404);
+    assert.equal((await call(`/planner/days/${yesterday}`, 'PUT', dayBody)).status, 400);
+    plan = 'free';
+    assert.equal((await call(weekPath)).status, 200);
+    assert.equal((await call(`/planner/days/${today}`, 'PUT', dayBody)).status, 403);
+    assert.equal((await call(`/planner/days/${today}?timeZone=UTC`, 'DELETE')).status, 200);
+    const wearId = randomUUID(), wearBody = { date: yesterday, timeZone: 'UTC', outfitId: outfits[0].id };
+    const confirmations = await Promise.all([0, 1].map(() => call(`/wear-history/${wearId}`, 'PUT', wearBody)));
+    assert.ok(confirmations.every(r => r.status === 200 && WearRecordResponse.parse(r.body).id === wearId));
+    assert.equal(await db.wearRecord.count({ where: { userId } }), 1);
+    assert.equal((await call(`/wear-history/${wearId}`, 'PUT', { ...wearBody, date: today })).status, 409);
+    assert.equal((await call(`/wear-history/${randomUUID()}`, 'PUT', wearBody)).status, 409);
+    assert.equal((await call(`/wear-history/${randomUUID()}`, 'PUT', wearBody, 'other')).status, 404);
+    assert.equal((await call(`/wear-history/${randomUUID()}`, 'PUT', { ...wearBody, date: new Date(Date.now() + 86400000).toISOString().slice(0, 10) })).status, 400);
+    for (const o of [outfits[0], outfits[1]]) assert.equal((await call(`/wear-history/${randomUUID()}`, 'PUT', { ...wearBody, date: today, outfitId: o.id })).status, 200);
+    assert.equal(WearHistoryResponse.parse((await call(`/wear-history?${periodPath}`)).body).items.length, 3);
+    assert.equal((await call(`/wear-history/${wearId}`, 'DELETE', undefined, 'other')).status, 200);
+    assert.equal(await db.wearRecord.count({ where: { userId } }), 3);
+    const seeded = Array.from({ length: 3 }, () => randomUUID());
+    await db.wearRecord.createMany({ data: seeded.map(id => ({ id, userId, date: new Date(today), timeZone: 'UTC', outfitId: null, garmentIds: [garments[0].id], requestHash: 'cap-fixture' })) });
+    assert.equal((await call(`/wear-history/${randomUUID()}`, 'PUT', { ...wearBody, date: today, outfitId: outfits[2].id })).status, 429);
+    await db.wearRecord.deleteMany({ where: { userId, id: { in: seeded } } });
+    plan = 'pro';
+    await call(`/planner/days/${today}`, 'PUT', dayBody);
+    await call(`/outfits/${outfits[0].id}/save`, 'POST', { saved: true });
+    stats = WardrobeInsightsResponse.parse((await call(`/wardrobe/insights?${periodPath}`)).body);
+    assert.equal(stats.status, 'available'); assert.equal(stats.confirmedRecords, 3); assert.equal(stats.recordedDays, 2);
+    assert.equal(stats.wardrobeGarments, 4); assert.equal(stats.garmentsWithoutRecords, 0);
+    assert.equal(stats.mostWorn.find(g => g.garmentId === garments[0].id).wearCount, 2);
+    assert.equal(stats.mostWorn.find(g => g.garmentId === garments[1].id).wearCount, 1);
+    assert.ok(stats.revisitOutfitIds.includes(outfits[0].id));
+    await call(`/wear-history/${wearId}`, 'DELETE');
+    assert.equal((await call(`/wardrobe/insights?${periodPath}`)).body.confirmedRecords, 2);
+    assert.equal((await call(`/wear-history/${wearId}`, 'PUT', wearBody)).status, 200);
+    await db.garment.update({ where: { id: garments[0].id }, data: { deletingAt: new Date() } });
+    assert.equal((await call(weekPath)).body.days[0].outfitUnavailable, true);
+    assert.equal((await call(`/wardrobe/insights?${periodPath}`)).body.wardrobeGarments, 3);
+    await db.garment.update({ where: { id: garments[0].id }, data: { deletingAt: null } });
+    assert.equal(await db.usageLedger.count({ where: { userId } }), 0);
+    assert.equal(await db.stylistJob.count({ where: { userId } }), 0);
+    plan = 'free';
     stage = 'profile';
     let r = await call('/style-profile');
     assert.equal(r.status, 200);
@@ -284,6 +398,9 @@ let stage = 'bootstrap';
     assert.ok(advised.advice);
     assert.equal(advised.adviceIsMock, true);
     assert.equal(advised.knowledgeVersion, 'knowledge-v1');
+    assert.deepEqual(advised.advice.adjustments, []);
+    assert.deepEqual(advised.advice.accessories, []);
+    assert.equal(advised.promptVersion, 'stylist-v2-basic');
     stage = 'suggest/ownership';
     const suggestion = await call(
       '/stylist/suggest',
@@ -327,6 +444,12 @@ let stage = 'bootstrap';
     await call(`/outfits/${outfits[0].id}`, 'DELETE');
     await worker.process({ data: { userId, id: late.body.jobId } });
     assert.equal((await call(`/outfits/${outfits[0].id}`)).status, 404);
+    assert.deepEqual((await call(`/collections/${collection.id}`)).body.outfitIds, [outfits[1].id]);
+    assert.equal(await db.collectionOutfit.count({ where: { userId, outfitId: outfits[0].id } }), 0);
+    assert.equal((await call(weekPath)).body.days[0].outfitUnavailable, true);
+    assert.equal((await call(weekPath)).body.days[0].outfitId, null);
+    assert.equal((await call(`/wear-history?${periodPath}`)).body.items.find(w => w.id === wearId).outfitId, null);
+    assert.equal((await call(`/wear-history/${wearId}`, 'PUT', wearBody)).status, 200);
     assert.equal((await call(`/stylist/jobs/${late.body.jobId}`)).status, 404);
     assert.equal(
       (await db.outfit.findUnique({ where: { id: outfits[0].id } }))
@@ -335,8 +458,62 @@ let stage = 'bootstrap';
     );
     await call(`/outfits/${outfits[1].id}/feedback`, 'POST', { liked: null });
     assert.equal(await taste(), null);
+    stage = 'tiered-advice/downgrade';
+    for (const value of ['plus', 'pro']) {
+      plan = value;
+      const paid = await call(`/outfits/${outfits[1].id}/advice`, 'POST', undefined, 'own', randomUUID());
+      assert.equal(paid.status, 201);
+      await worker.process({ data: { userId, id: paid.body.jobId } });
+      const result = Outfit.parse((await call(`/outfits/${outfits[1].id}`)).body);
+      assert.ok(result.advice.adjustments.length);
+      assert.ok(result.advice.accessories.length);
+      assert.equal(result.promptVersion, 'stylist-v2-advanced');
+    }
+    const pending = await call(`/outfits/${outfits[2].id}/advice`, 'POST', undefined, 'own', randomUUID());
+    plan = 'free';
+    // Archived paid advice stays readable after downgrade; queued work loses paid privileges.
+    assert.ok((await call(`/outfits/${outfits[1].id}`)).body.advice.accessories.length);
+    await worker.process({ data: { userId, id: pending.body.jobId } });
+    assert.deepEqual((await call(`/outfits/${outfits[2].id}`)).body.advice.accessories, []);
+    let usage = StylistUsageResponse.parse((await call('/stylist/usage?plan=pro&userId=foreign')).body);
+    assert.equal(usage.plan, 'free');
+    assert.equal(usage.used, 5);
+    assert.equal(StylistUsageResponse.parse((await call('/stylist/usage', 'GET', undefined, 'other')).body).used, 0);
+    const released = await service.create(userId, randomUUID(), { kind: 'suggest', request: { occasion: 'casual' } });
+    await repo.fail(userId, released.jobId, 'INTERNAL_ERROR');
+    assert.equal((await repo.usage(userId)).used, 5);
+    stage = 'concurrent-stylist-cap/uncertain-receipt';
+    const queued = [];
+    for (let n = usage.used; n < 9; n++)
+      queued.push(await service.create(userId, randomUUID(), { kind: 'suggest', request: { occasion: 'casual' } }));
+    const concurrentKeys = [randomUUID(), randomUUID(), randomUUID()];
+    const burst = await Promise.all(concurrentKeys.map(key => call('/stylist/suggest', 'POST', { occasion: 'casual' }, 'own', key)));
+    assert.equal(burst.filter(r => r.status === 201).length, 1);
+    assert.equal(burst.filter(r => r.status === 429 && r.body.code === 'QUOTA_EXCEEDED').length, 2);
+    const accepted = burst.findIndex(r => r.status === 201);
+    queued.push(burst[accepted].body);
+    const suggest = provider.suggest.bind(provider);
+    provider.suggest = async () => { throw new Error('synthetic ambiguous receipt'); };
+    await assert.rejects(worker.process({ data: { userId, id: queued[0].jobId } }));
+    provider.suggest = suggest;
+    assert.equal((await repo.usage(userId)).used, 10);
+    // A started failure is terminal; replay never calls the restored provider.
+    await worker.process({ data: { userId, id: queued[0].jobId } });
+    assert.equal((await db.stylistJob.findUnique({ where: { id: queued[0].jobId } })).status, 'failed');
+    for (const item of queued.slice(1)) await worker.process({ data: { userId, id: item.jobId } });
+    const replay = await call('/stylist/suggest', 'POST', { occasion: 'casual' }, 'own', concurrentKeys[accepted]);
+    assert.equal(replay.body.jobId, burst[accepted].body.jobId);
+    assert.equal((await repo.usage(userId)).used, 10);
+    plan = 'plus';
+    const over = await service.create(userId, randomUUID(), { kind: 'suggest', request: { occasion: 'casual' } });
+    plan = 'free';
+    await assert.rejects(worker.process({ data: { userId, id: over.jobId } }));
+    const blocked = await db.stylistJob.findUnique({ where: { id: over.jobId } });
+    assert.equal(blocked.errorCode, 'QUOTA_EXCEEDED');
+    assert.equal(blocked.startedAt, null);
+    assert.equal((await repo.usage(userId)).used, 10);
     console.log(
-      'Stylist live checks passed: real Neon/ImageKit, inferred/editable profile, saved pagination, owner filters, tri-state/repeated feedback, taste/ranking change, 3 fake suggestions, advice/idempotency, deletion race. No Redis or AI calls.',
+      'Phase6 live passed: real Neon/ImageKit; collections ownership/cap race; 7-day manual planner, timezone/date validation, Pro gates/downgrade archive, explicit idempotent wear confirmations, daily cap, insufficient-data/confirmed counts, deterministic outfit suggestions, deletion recalculation, missing garments/outfit handling; stylist quota/replay regression. Identity/plans/AI fake, in-memory dispatch, no paid AI calls.',
     );
   } finally {
     if (storage) for (const fileId of files) await storage.delete(fileId);
@@ -349,6 +526,9 @@ let stage = 'bootstrap';
         const userIds = users.map((u) => u.id);
         const where = { userId: { in: userIds } };
         await cleanup.stylistJob.deleteMany({ where });
+        await cleanup.outfitCollection.deleteMany({ where });
+        await cleanup.plannerDay.deleteMany({ where });
+        await cleanup.wearRecord.deleteMany({ where });
         await cleanup.outfit.deleteMany({ where });
         await cleanup.tryOnJob.deleteMany({ where });
         await cleanup.styleProfile.deleteMany({ where });

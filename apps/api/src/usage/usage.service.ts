@@ -1,5 +1,13 @@
-import { Injectable, HttpException } from '@nestjs/common';
-import { UsageResponse, type Plan } from '@stylist/shared';
+import { Injectable, HttpException, ForbiddenException } from '@nestjs/common';
+import {
+  UsageResponse,
+  EntitlementsResponse,
+  PLAN_FEATURES,
+  PLAN_TRY_ON_LIMITS,
+  AVAILABLE_SUBSCRIPTION_FEATURES,
+  type Plan,
+  type SubscriptionFeature,
+} from '@stylist/shared';
 import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { RuntimeConfig } from '../config/runtime-config';
@@ -47,6 +55,35 @@ export class UsageService {
       remaining: Math.max(0, limit - used),
       resetsAt: period.reset.toISOString(),
     });
+  }
+  async getEntitlements(userId: string) {
+    const { plan, limit, resetsAt } = await this.get(userId);
+    const includedFeatures = PLAN_FEATURES[plan];
+    return EntitlementsResponse.parse({
+      plan,
+      includedFeatures,
+      availableFeatures: includedFeatures.filter(
+        (feature) =>
+          AVAILABLE_SUBSCRIPTION_FEATURES.includes(feature) &&
+          (!feature.startsWith('monthly_try_on_') ||
+            limit === PLAN_TRY_ON_LIMITS[plan]),
+      ),
+      tryOn: { limit, period: 'calendar_month_utc', resetsAt },
+    });
+  }
+  async requireFeature(userId: string, feature: SubscriptionFeature) {
+    const access = await this.getEntitlements(userId);
+    if (!access.availableFeatures.includes(feature))
+      throw new ForbiddenException({
+        code: 'FORBIDDEN',
+        message: 'Subscription feature is not available',
+        details: {
+          feature,
+          reason: access.includedFeatures.includes(feature)
+            ? 'not_available'
+            : 'not_included',
+        },
+      });
   }
   // Caller holds the user row lock; persist job and debit in the same transaction.
   async reserve(

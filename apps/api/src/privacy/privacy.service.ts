@@ -157,6 +157,9 @@ export class PrivacyService {
       await this.prisma.$transaction(async (tx) => {
         await this.limits.lock(tx, userId, false);
         await tx.stylistJob.deleteMany({ where: { userId } });
+        await tx.outfitCollection.deleteMany({ where: { userId } });
+        await tx.plannerDay.deleteMany({ where: { userId } });
+        await tx.wearRecord.deleteMany({ where: { userId } });
         await tx.outfit.deleteMany({ where: { userId } });
         await tx.tryOnJob.deleteMany({ where: { userId } });
         await tx.garment.updateMany({

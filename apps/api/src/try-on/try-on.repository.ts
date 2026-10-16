@@ -10,6 +10,7 @@ import {
   GarmentTags,
   ModelPhotoAnalysis,
   isTryOnAllowed,
+  PLAN_FEATURES,
 } from '@stylist/shared';
 import { PrismaService } from '../database/prisma.service';
 import type { Prisma } from '../generated/prisma/client';
@@ -136,7 +137,9 @@ export class TryOnRepository {
           ...input,
           provider,
           imageModel,
-          queuePriority: plan === 'pro' ? 1 : 10,
+          queuePriority: PLAN_FEATURES[plan].includes('priority_queue')
+            ? 1
+            : 10,
           deadlineAt: new Date(Date.now() + 15 * 60 * 1000),
         },
       });

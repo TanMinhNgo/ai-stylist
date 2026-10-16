@@ -10,6 +10,8 @@ import { RequestLogMiddleware } from './common/request-log.middleware';
 import { MediaModule } from './media/media.module';
 import { TryOnModule } from './try-on/try-on.module';
 import { UsageModule } from './usage/usage.module';
+import { CollectionsModule } from './collections/collections.module';
+import { PlanningModule } from './planning/planning.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { UsageModule } from './usage/usage.module';
     QueueModule,
     MediaModule,
     TryOnModule,
+    CollectionsModule,
+    PlanningModule,
   ],
   controllers: [AppController],
   providers: [

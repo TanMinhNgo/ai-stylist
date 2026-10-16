@@ -54,4 +54,19 @@ describe('RuntimeConfig', () => {
     process.env.NODE_ENV = 'production';
     expect(() => new RuntimeConfig()).toThrow('disabled in production');
   });
+  it('defaults to Phase6 quotas while permitting explicit internal overrides', () => {
+    expect(new RuntimeConfig().values).toMatchObject({
+      USAGE_FREE_LIMIT: 5,
+      USAGE_PLUS_LIMIT: 20,
+      USAGE_PRO_LIMIT: 60,
+    });
+    process.env.USAGE_PLUS_LIMIT = '50';
+    expect(new RuntimeConfig().values.USAGE_PLUS_LIMIT).toBe(50);
+  });
+  it('rejects overlapping paid/free plan slugs instead of granting the wrong rights', () => {
+    process.env.CLERK_PLUS_PLAN_SLUG = 'pro';
+    expect(() => new RuntimeConfig()).toThrow('CLERK_PLUS_PLAN_SLUG');
+    process.env.CLERK_PLUS_PLAN_SLUG = 'free';
+    expect(() => new RuntimeConfig()).toThrow('CLERK_PLUS_PLAN_SLUG');
+  });
 });

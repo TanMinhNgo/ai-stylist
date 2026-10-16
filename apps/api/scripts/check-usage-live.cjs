@@ -1,9 +1,14 @@
 // Real Neon/Redis/ImageKit, fake identity/billing/AI and in-memory queue dispatch. Fixture accounts only.
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
+const { setTimeout: delay } = require('node:timers/promises');
 require('node:process').loadEnvFile('.env');
 process.env.NODE_ENV = 'test';
+// Only this fixture process enables plan lookup; PlanSource is replaced below, no paid subscription calls.
+process.env.CLERK_BILLING_ENABLED = 'true';
 process.env.USAGE_FREE_LIMIT = '1';
+process.env.USAGE_PLUS_LIMIT = '20';
+process.env.USAGE_PRO_LIMIT = '60';
 process.env.AI_MAX_ACTIVE_JOBS = '2';
 process.env.AI_COST_RATES_JSON = JSON.stringify({
   fixture: { input: 1, output: 2 },
@@ -34,19 +39,63 @@ const { TryOnProcessor } = require('../dist/try-on/try-on.processor');
 const { AssetProcessor } = require('../dist/garment-assets/asset.processor');
 const { StylistProcessor } = require('../dist/stylist/stylist.processor');
 const { PrivacyProcessor } = require('../dist/privacy/privacy.processor');
-const { UsageResponse, AccountDeletionResponse } = require('@stylist/shared');
+const {
+  UsageResponse,
+  AccountDeletionResponse,
+  EntitlementsResponse,
+  PLAN_FEATURES,
+  CLERK_FEATURE_SLUGS,
+} = require('@stylist/shared');
+const { createClerkClient } = require('@clerk/backend');
 const clerkIds = [`user_phase5_${randomUUID()}`, `user_phase5_${randomUUID()}`];
+const planByClerkId = new Map([
+  [clerkIds[0], 'free'],
+  [clerkIds[1], 'pro'],
+]);
 const queued = [],
   users = [],
   files = [];
+const fileOwners = new Map();
 let app,
   db,
   redis,
   storage,
   stage = 'bootstrap',
   release;
+async function until(predicate) {
+  const deadline = Date.now() + 90000;
+  while (!(await predicate())) {
+    assert.ok(Date.now() < deadline, `Timeout at ${stage}`);
+    await delay(1000);
+  }
+}
 (async () => {
   try {
+    stage = 'read-only Clerk plan/feature catalog';
+    const catalog = await createClerkClient({
+      secretKey: process.env.CLERK_SECRET_KEY,
+    }).billing.getPlanList({ payerType: 'user', limit: 100 });
+    assert.equal(
+      catalog.totalCount,
+      catalog.data.length,
+      'Catalog pagination required',
+    );
+    for (const plan of ['free', 'plus', 'pro']) {
+      const slug =
+        plan === 'free'
+          ? 'free'
+          : process.env[`CLERK_${plan.toUpperCase()}_PLAN_SLUG`] || plan;
+      const actual = catalog.data.find((p) => p.slug === slug);
+      assert.ok(actual, `Missing Clerk plan ${plan}`);
+      assert.deepEqual(
+        new Set(actual.features.map((f) => f.slug)),
+        new Set(PLAN_FEATURES[plan].map((f) => CLERK_FEATURE_SLUGS[f])),
+      );
+    }
+    console.log(
+      'Read-only Clerk catalog matched: 3 plans and 12 mapped feature slugs.',
+    );
+    stage = 'bootstrap';
     const builder = Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(IdentityProvider)
       .useValue({
@@ -56,7 +105,7 @@ let app,
       .overrideProvider(PlanSource)
       .useValue({
         get: async (id) => ({
-          plan: id === clerkIds[1] ? 'pro' : 'free',
+          plan: planByClerkId.get(id),
           validUntil: Date.now() + 60000,
         }),
       })
@@ -118,6 +167,7 @@ let app,
     const save = async (owner) => {
       const file = await storage.saveResult(png, owner, randomUUID());
       files.push(file.fileId);
+      fileOwners.set(file.fileId, owner);
       return file;
     };
     const ownFile = await save(userId),
@@ -228,6 +278,55 @@ let app,
         await db.usageLedger.findFirst({ where: { jobId: oldJob, delta: 1 } })
       ).periodStart.getTime(),
       month(oldTime).start.getTime(),
+    );
+    stage = 'plan transitions preserve ledger and feature availability';
+    for (const [plan, limit, remaining] of [
+      ['plus', 20, 19],
+      ['pro', 60, 59],
+      ['free', 1, 0],
+    ]) {
+      planByClerkId.set(clerkIds[0], plan);
+      await planService.invalidate(clerkIds[0]);
+      const current = UsageResponse.parse(
+        (await call('/usage?plan=pro&userId=attacker')).body,
+      );
+      assert.deepEqual(
+        [current.plan, current.limit, current.used, current.remaining],
+        [plan, limit, 1, remaining],
+      );
+      const access = EntitlementsResponse.parse(
+        (
+          await call(
+            '/usage/entitlements?plan=pro&feature=priority_queue&userId=attacker',
+          )
+        ).body,
+      );
+      assert.equal(access.plan, plan);
+      assert.equal(
+        access.availableFeatures.includes('priority_queue'),
+        plan === 'pro',
+      );
+      assert.equal(
+        access.availableFeatures.includes('weekly_outfit_planner'),
+          plan === 'pro',
+      );
+      assert.equal(
+        access.availableFeatures.includes('advanced_outfit_advice'),
+        plan !== 'free',
+      );
+      if (plan === 'pro')
+          await usage.requireFeature(userId, 'weekly_outfit_planner');
+    }
+    await assert.rejects(
+      usage.requireFeature(userId, 'priority_queue'),
+      (e) => e.response.details.reason === 'not_included',
+    );
+    await assert.rejects(
+      db.$transaction(async (tx) => {
+        await limits.lock(tx, userId);
+        await usage.reserve(tx, userId, randomUUID(), 'free');
+      }),
+      (e) => e.response.code === 'QUOTA_EXCEEDED',
     );
     stage = 'Pro queue priority and concurrency cap';
     const otherPhoto = await db.modelPhoto.create({
@@ -340,6 +439,12 @@ let app,
     assert.equal((await privacy.status(userId)).status, 'queued');
     release();
     await running;
+    await until(async () => {
+      const inventory = await storage.listUserFiles(userId);
+      return files
+        .filter((id) => fileOwners.get(id) === userId)
+        .every((id) => inventory.includes(id));
+    });
     await db.accountDeletion.update({
       where: { userId },
       data: { retryAt: new Date(0) },
@@ -367,11 +472,14 @@ let app,
     await privacy.purge(receipt.deletionId, userId);
     assert.equal((await privacy.status(userId)).status, 'failed');
     assert.equal(await db.modelPhoto.count({ where: { userId } }), 1);
-    await db.accountDeletion.update({
-      where: { userId },
-      data: { retryAt: new Date(0) },
+    await until(async () => {
+      await db.accountDeletion.update({
+        where: { userId },
+        data: { retryAt: new Date(0) },
+      });
+      await privacy.purge(receipt.deletionId, userId);
+      return (await privacy.status(userId)).status === 'completed';
     });
-    await privacy.purge(receipt.deletionId, userId);
     storage.delete = deleteFile;
     assert.equal((await privacy.status(userId)).status, 'completed');
     for (const table of [
@@ -386,6 +494,16 @@ let app,
     ])
       assert.equal(await db[table].count({ where: { userId } }), 0);
     assert.deepEqual(await storage.listUserFiles(userId), []);
+    for (const id of files.filter((id) => fileOwners.get(id) === userId))
+      await until(async () => {
+        try {
+          await storage.get(id);
+          return false;
+        } catch (error) {
+          if (error.status === 404) return true;
+          throw error;
+        }
+      });
     assert.equal(
       (await storage.get(otherFile.fileId)).fileId,
       otherFile.fileId,
@@ -398,7 +516,7 @@ let app,
     assert.ok(resurrect.deletedAt);
     assert.equal((await call('/me')).status, 401);
     console.log(
-      'Phase5 live passed: last-credit race, idempotent refund, original UTC period, Pro priority (fake PlanSource), cap, real Redis atomic rate limit, async deletion/worker/upload wait/retry/orphans/ownership/tombstone. No AI calls or real Clerk deletion; grant time advanced only for fixtures.',
+      'Usage live passed: read-only real Clerk catalog; upgrade/downgrade ledger and entitlements; last-credit race, idempotent refund, original UTC period, Pro priority (fake PlanSource), cap, real Redis atomic rate limit, deletion/worker/upload wait/retry/orphans/ownership/tombstone. Identity/subscription/AI are fake; dispatch is in-memory, no real Clerk deletion. Grant time advanced only for fixtures.',
     );
   } finally {
     release?.();

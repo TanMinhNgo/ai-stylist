@@ -8,4 +8,7 @@ export class UsageController {
   @Get() get(@CurrentUser() user: User) {
     return this.usage.get(user.id);
   }
+  @Get('entitlements') entitlements(@CurrentUser() user: User) {
+    return this.usage.getEntitlements(user.id);
+  }
 }

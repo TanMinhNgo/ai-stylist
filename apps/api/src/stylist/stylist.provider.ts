@@ -3,9 +3,11 @@ import {
   StyleProfile,
   StylistAdvice,
   SuggestOutput,
+  AdviceLevel,
 } from '@stylist/shared';
 export type Candidate = { id: string; tags: GarmentTags; source: string };
 export type StylistContext = {
+  adviceLevel?: AdviceLevel;
   occasion: string;
   profile: StyleProfile;
   garments: Candidate[];

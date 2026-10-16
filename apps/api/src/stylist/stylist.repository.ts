@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  HttpException,
 } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import {
@@ -9,6 +10,10 @@ import {
   ModelPhotoAnalysis,
   StyleProfile,
   isTryOnAllowed,
+  AdviceLevel,
+  PLAN_FEATURES,
+  PLAN_STYLIST_LIMITS,
+  StylistUsageResponse,
   type UpdateStyleProfileRequest,
   type OutfitListQuery,
   type SuggestRequest,
@@ -18,6 +23,8 @@ import type { Prisma } from '../generated/prisma/client';
 import { snapshotOutfit } from './snapshot';
 import { parseVector, tasteVector, formalityRange } from './taste';
 import { JobLimitsService } from '../usage/job-limits.service';
+import { PlanService } from '../usage/plan.service';
+import { month } from '../usage/usage.service';
 
 export type StylistInput =
   | { kind: 'advice'; outfitId: string }
@@ -32,7 +39,55 @@ export class StylistRepository {
   constructor(
     private readonly prisma: PrismaService,
     private readonly limits: JobLimitsService,
+    private readonly plans: PlanService,
   ) {}
+  private async stylistUsed(
+    db: Prisma.TransactionClient,
+    userId: string,
+    at: Date,
+    startedOnly = false,
+  ) {
+    const period = month(at);
+    return db.stylistJob.count({
+      where: {
+        userId,
+        createdAt: { gte: period.start, lt: period.reset },
+        ...(startedOnly
+          ? { startedAt: { not: null } }
+          : {
+              OR: [
+                { status: { in: ['queued', 'processing', 'ready'] } },
+                { startedAt: { not: null } },
+              ],
+            }),
+      },
+    });
+  }
+  async usage(userId: string) {
+    const plan = await this.plans.getUserPlan(userId);
+    const now = new Date();
+    const used = await this.stylistUsed(this.prisma, userId, now);
+    const limit = PLAN_STYLIST_LIMITS[plan];
+    return StylistUsageResponse.parse({
+      plan,
+      adviceLevel: plan === 'free' ? 'basic' : 'advanced',
+      limit,
+      used,
+      remaining: Math.max(0, limit - used),
+      period: 'calendar_month_utc',
+      resetsAt: month(now).reset.toISOString(),
+    });
+  }
+  private quotaExceeded() {
+    return new HttpException(
+      {
+        code: 'QUOTA_EXCEEDED',
+        message: 'Monthly stylist limit reached',
+        details: { resource: 'stylist' },
+      },
+      429,
+    );
+  }
   private async lock(db: Prisma.TransactionClient, userId: string) {
     const users = await db.$queryRaw<
       { id: string }[]
@@ -184,6 +239,15 @@ export class StylistRepository {
         where: { id, userId, user: { deletedAt: null } },
       });
       if (!row) throw new NotFoundException();
+      await tx.collectionOutfit.deleteMany({ where: { userId, outfitId: id } });
+      await tx.plannerDay.updateMany({
+        where: { userId, outfitId: id },
+        data: { outfitId: null, outfitUnavailable: true },
+      });
+      await tx.wearRecord.updateMany({
+        where: { userId, outfitId: id },
+        data: { outfitId: null },
+      });
       await tx.outfit.updateMany({
         where: { id, userId },
         data: { deletedAt: new Date(), adviceStatus: null, adviceJobId: null },
@@ -299,6 +363,18 @@ export class StylistRepository {
         }
       }
       await this.limits.check(tx, userId);
+      const plan = await this.plans.getUserPlan(userId);
+      const admittedAt = new Date();
+      if (
+        (await this.stylistUsed(tx, userId, admittedAt)) >=
+        PLAN_STYLIST_LIMITS[plan]
+      )
+        throw this.quotaExceeded();
+      const adviceLevel: AdviceLevel =
+        PLAN_FEATURES[plan].includes('advanced_outfit_advice') &&
+        PLAN_FEATURES[plan].includes('accessory_recommendations')
+          ? 'advanced'
+          : 'basic';
       const row = await tx.stylistJob.create({
         data: {
           id: randomUUID(),
@@ -306,7 +382,8 @@ export class StylistRepository {
           key,
           requestHash: hash,
           kind: input.kind,
-          input,
+          input: { ...input, adviceLevel },
+          createdAt: admittedAt,
           outfitId: input.kind === 'advice' ? input.outfitId : null,
           provider,
           model,
@@ -338,6 +415,20 @@ export class StylistRepository {
         where: { id, userId, ...active },
       });
       if (!row) return false;
+      const plan = await this.plans.getUserPlan(userId);
+      // Reserve at enqueue; after downgrade only admitted model calls consume the lower cap.
+      if (
+        (await this.stylistUsed(tx, userId, row.createdAt, true)) >=
+        PLAN_STYLIST_LIMITS[plan]
+      )
+        throw this.quotaExceeded();
+      const input = row.input as Record<string, Prisma.InputJsonValue>;
+      const adviceLevel: AdviceLevel =
+        input.adviceLevel === 'advanced' &&
+        PLAN_FEATURES[plan].includes('advanced_outfit_advice') &&
+        PLAN_FEATURES[plan].includes('accessory_recommendations')
+          ? 'advanced'
+          : 'basic';
       const changed = await tx.stylistJob.updateMany({
         where: {
           id,
@@ -346,14 +437,18 @@ export class StylistRepository {
           startedAt: null,
           deadlineAt: { gt: new Date() },
         },
-        data: { status: 'processing', startedAt: new Date() },
+        data: {
+          status: 'processing',
+          startedAt: new Date(),
+          input: { ...input, adviceLevel },
+        },
       });
       if (changed.count && row.outfitId)
         await tx.outfit.updateMany({
           where: { id: row.outfitId, userId, ...alive, adviceJobId: id },
           data: { adviceStatus: 'processing' },
         });
-      return changed.count === 1;
+      return changed.count === 1 ? adviceLevel : false;
     });
   }
   async fail(userId: string, id: string, code: string) {
@@ -388,7 +483,7 @@ export class StylistRepository {
             advice: result,
             adviceStatus: 'ready',
             adviceErrorCode: null,
-            advicePromptVersion: 'stylist-v1',
+            advicePromptVersion: `stylist-v2-${(row.input as Record<string, unknown>).adviceLevel === 'advanced' ? 'advanced' : 'basic'}`,
             adviceKnowledgeVersion: 'knowledge-v1',
             adviceProvider: row.provider,
           },

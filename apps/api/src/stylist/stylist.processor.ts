@@ -1,12 +1,19 @@
 import {
   Logger,
+  HttpException,
   OnApplicationBootstrap,
   OnModuleDestroy,
 } from '@nestjs/common';
 import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job, UnrecoverableError } from 'bullmq';
 import { z } from 'zod';
-import { SuggestRequest, SuggestOutput, StylistAdvice } from '@stylist/shared';
+import {
+  AdviceLevel,
+  BasicStylistAdvice,
+  SuggestRequest,
+  SuggestOutput,
+  StylistAdvice,
+} from '@stylist/shared';
 import { StylistRepository } from './stylist.repository';
 import { StylistProvider } from './stylist.provider';
 import { StylistService, snapshotSchema } from './stylist.service';
@@ -15,8 +22,16 @@ import { validateSuggestions } from './suggestions';
 import { WorkService } from '../usage/work.service';
 const payload = z.strictObject({ userId: z.uuid(), id: z.uuid() });
 const inputSchema = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('advice'), outfitId: z.uuid() }),
-  z.strictObject({ kind: z.literal('suggest'), request: SuggestRequest }),
+  z.strictObject({
+    kind: z.literal('advice'),
+    outfitId: z.uuid(),
+    adviceLevel: AdviceLevel.optional(),
+  }),
+  z.strictObject({
+    kind: z.literal('suggest'),
+    request: SuggestRequest,
+    adviceLevel: AdviceLevel.optional(),
+  }),
 ]);
 @Processor('stylist', { concurrency: 1, maxStalledCount: 1 })
 export class StylistProcessor
@@ -81,12 +96,14 @@ export class StylistProcessor
       )
         throw new Error('Invalid stylist job state');
       const input = inputSchema.parse(row.input);
-      if (!(await this.repo.begin(userId, id))) return;
+      const adviceLevel = await this.repo.begin(userId, id);
+      if (!adviceLevel) return;
       const profile = await this.repo.profile(userId);
       const liked = await this.repo.liked(userId);
       if (input.kind === 'advice') {
         const outfit = await this.repo.outfit(userId, input.outfitId);
         const context = {
+          adviceLevel,
           occasion: outfit.tryOnJob.occasion,
           profile,
           garments: snapshotSchema
@@ -100,7 +117,16 @@ export class StylistProcessor
             this.storage.url(outfit.filePath, 1024),
           ),
         );
-        await this.service.finish(userId, id, result, 'advice');
+        const advice =
+          adviceLevel === 'advanced'
+            ? result
+            : BasicStylistAdvice.parse({
+                ...result,
+                strengths: result.strengths.slice(0, 2),
+                adjustments: [],
+                accessories: [],
+              });
+        await this.service.finish(userId, id, advice, 'advice');
       } else {
         const garments = await this.repo.candidates(
           userId,
@@ -136,9 +162,15 @@ export class StylistProcessor
           'suggest',
         );
       }
-    } catch {
+    } catch (error) {
       try {
-        await this.repo.fail(userId, id, 'INTERNAL_ERROR');
+        await this.repo.fail(
+          userId,
+          id,
+          error instanceof HttpException && error.getStatus() === 429
+            ? 'QUOTA_EXCEEDED'
+            : 'INTERNAL_ERROR',
+        );
       } catch {
         this.logger.error('Stylist failure status needs recovery');
       }

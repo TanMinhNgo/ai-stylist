@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { Logger } from '@nestjs/common';
+import { Logger, HttpException } from '@nestjs/common';
 import { Job, UnrecoverableError } from 'bullmq';
 import { StyleProfile, GarmentTags } from '@stylist/shared';
 import { StylistProcessor } from './stylist.processor';
@@ -56,7 +56,7 @@ describe('Stylist worker ownership, replay and optional advice', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     repo.find.mockResolvedValue(row);
-    repo.begin.mockResolvedValue(true);
+    repo.begin.mockResolvedValue('basic');
     repo.profile.mockResolvedValue(profile);
     repo.liked.mockResolvedValue([]);
     repo.outfit.mockResolvedValue({
@@ -76,6 +76,50 @@ describe('Stylist worker ownership, replay and optional advice', () => {
       'advice',
     );
     expect(repo.fail).not.toHaveBeenCalled();
+  });
+  it('uses the worker policy, not the paid level stored before downgrade', async () => {
+    repo.find.mockResolvedValue({
+      ...row,
+      input: { ...row.input, adviceLevel: 'advanced' },
+    });
+    const advice = jest.spyOn(provider, 'advice');
+    await worker.process(job);
+    expect(advice).toHaveBeenCalledWith(
+      expect.objectContaining({ adviceLevel: 'basic' }),
+      expect.any(String),
+    );
+    expect(service.finish).toHaveBeenCalledWith(
+      userId,
+      id,
+      expect.objectContaining({ adjustments: [], accessories: [] }),
+      'advice',
+    );
+    advice.mockRestore();
+  });
+  it('persists detailed advice and accessories only for admitted advanced jobs', async () => {
+    repo.begin.mockResolvedValue('advanced');
+    await worker.process(job);
+    expect(service.finish).toHaveBeenCalledWith(
+      userId,
+      id,
+      expect.objectContaining({
+        adjustments: [expect.any(Object)],
+        accessories: [expect.any(Object)],
+      }),
+      'advice',
+    );
+  });
+  it('does not call AI when the worker cap is exhausted after a downgrade', async () => {
+    repo.begin.mockRejectedValue(
+      new HttpException({ code: 'QUOTA_EXCEEDED' }, 429),
+    );
+    const advice = jest.spyOn(provider, 'advice');
+    await expect(worker.process(job)).rejects.toBeInstanceOf(
+      UnrecoverableError,
+    );
+    expect(advice).not.toHaveBeenCalled();
+    expect(repo.fail).toHaveBeenCalledWith(userId, id, 'QUOTA_EXCEEDED');
+    advice.mockRestore();
   });
   it('does not replay a started model call after an uncertain crash', async () => {
     repo.find.mockResolvedValue({ ...row, startedAt: new Date() });

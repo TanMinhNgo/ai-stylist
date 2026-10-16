@@ -1,13 +1,29 @@
 import { Global, Injectable, Module } from '@nestjs/common';
 import { z } from 'zod';
+import { PLAN_TRY_ON_LIMITS } from '@stylist/shared';
 
 const schema = z.object({
   CLERK_BILLING_ENABLED: z.enum(['true', 'false']).default('false'),
   CLERK_PLUS_PLAN_SLUG: z.string().min(1).default('plus'),
   CLERK_PRO_PLAN_SLUG: z.string().min(1).default('pro'),
-  USAGE_FREE_LIMIT: z.coerce.number().int().min(0).max(10000).default(5),
-  USAGE_PLUS_LIMIT: z.coerce.number().int().min(0).max(10000).default(50),
-  USAGE_PRO_LIMIT: z.coerce.number().int().min(0).max(10000).default(200),
+  USAGE_FREE_LIMIT: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(10000)
+    .default(PLAN_TRY_ON_LIMITS.free),
+  USAGE_PLUS_LIMIT: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(10000)
+    .default(PLAN_TRY_ON_LIMITS.plus),
+  USAGE_PRO_LIMIT: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(10000)
+    .default(PLAN_TRY_ON_LIMITS.pro),
   AI_RATE_LIMIT_PER_MINUTE: z.coerce
     .number()
     .int()
@@ -70,6 +86,16 @@ export class RuntimeConfig {
         `Invalid API configuration: ${result.error.issues.map((issue) => issue.path.join('.')).join(', ')}`,
       );
     }
+    if (
+      result.data.CLERK_PLUS_PLAN_SLUG === result.data.CLERK_PRO_PLAN_SLUG ||
+      [
+        result.data.CLERK_PLUS_PLAN_SLUG,
+        result.data.CLERK_PRO_PLAN_SLUG,
+      ].includes('free')
+    )
+      throw new Error(
+        'Invalid API configuration: CLERK_PLUS_PLAN_SLUG, CLERK_PRO_PLAN_SLUG',
+      );
     this.values = result.data;
     if (
       process.env.NODE_ENV === 'production' &&

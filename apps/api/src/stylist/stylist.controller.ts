@@ -32,6 +32,9 @@ export class StylistController {
     private readonly repo: StylistRepository,
     private readonly service: StylistService,
   ) {}
+  @Get('stylist/usage') usage(@CurrentUser() user: User) {
+    return this.repo.usage(user.id);
+  }
   @Get('style-profile') profile(@CurrentUser() user: User) {
     return this.repo.profile(user.id);
   }

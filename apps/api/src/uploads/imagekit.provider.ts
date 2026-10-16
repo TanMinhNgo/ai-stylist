@@ -66,7 +66,7 @@ export class ImageKitProvider extends ImageStorageProvider {
       throw new Error('Invalid user folder');
     const prefix = `/stylist/${userId}/`;
     const files = await this.client.assets.list({
-      searchQuery: `path : "${prefix}*"`,
+      searchQuery: `path : "${prefix}" AND type = "file"`,
       limit: 100,
     });
     return files.map((file) => {
