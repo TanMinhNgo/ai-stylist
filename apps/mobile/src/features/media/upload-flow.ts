@@ -7,7 +7,7 @@ import { uploadImage, uploadMessage } from '@/lib/upload';
 
 /**
  * resize → one-time grant (GET /uploads/auth) → ImageKit → POST /<kind>, parsed with `schema`.
- * `extra` adds endpoint-specific fields (garments: generateAsset/bodyKey/requestedType). Every step stops on `signal`; the grant is single-use, so retries start from the top.
+ * `extra` adds endpoint-specific fields (garments: requestedType). Every step stops on `signal`; the grant is single-use, so retries start from the top.
  */
 export async function uploadMedia<T>(
   kind: 'model-photos' | 'garments',

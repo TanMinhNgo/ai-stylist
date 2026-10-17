@@ -4,7 +4,6 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, ErrorState, Glass, Icon, LoadingState, Text } from '@/components/ui';
-import { MannequinAssetSection } from '@/features/assets/MannequinAssetSection';
 import { useDeleteGarment, useGarment } from '@/features/garments/hooks';
 import { CATEGORY_LABEL, FIT_LABEL, FORMALITY_LABEL, LENGTH_LABEL, PATTERN_LABEL, RISE_LABEL, SEASON_LABEL, SLEEVE_LABEL, TYPE_LABEL } from '@/features/garments/labels';
 import { messageFor, RequestError } from '@/lib/errors';
@@ -95,7 +94,6 @@ export default function GarmentDetailScreen() {
               {g?.tryOnAllowed === false ? (
                 <Text variant="footnote" color={colors.inkSecondary}>Loại trang phục này không dùng để thử lên ảnh.</Text>
               ) : null}
-              {g ? <MannequinAssetSection garment={g} /> : null}
             </>
           ) : null}
 

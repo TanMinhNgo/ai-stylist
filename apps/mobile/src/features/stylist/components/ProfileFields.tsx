@@ -1,21 +1,17 @@
-import { Image } from 'expo-image';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Icon, Text } from '@/components/ui';
 import { CASUAL_OUTFITS, DEMO_ITEMS, DEMO_OUTFITS } from '@/features/studio/catalog';
-import { colorHex } from '@/features/studio/looks';
-import type { Sprite } from '@/features/studio/outfit';
+import { GarmentIcon } from '@/features/studio/GarmentIcon';
+import { colorHex, lookFor, type Look } from '@/features/studio/looks';
 import { toggleLabel } from '@/features/stylist/logic';
 import { colors, radius, space, type } from '@/theme';
 
-type Pic = Sprite['source'];
+type Pic = Look | null;
 
-// Style examples reuse the bundled demo PNGs (no extra assets): a full outfit image or its pieces.
-const outfitPics = (id: string): Pic[] => {
-  const o = [...DEMO_OUTFITS, ...CASUAL_OUTFITS].find((x) => x.id === id)!;
-  return o.image ? [o.image] : o.members.map((m) => m.sprite!.source);
-};
-const itemPics = (...ids: string[]): Pic[] => ids.map((id) => DEMO_ITEMS.find((w) => w.id === `demo:${id}`)!.sprite!.source);
+// Style examples are cartoon icons of up to four demo pieces, like the Studio tray.
+const outfitPics = (id: string): Pic[] => [...DEMO_OUTFITS, ...CASUAL_OUTFITS].find((x) => x.id === id)!.members.slice(0, 4).map((m) => lookFor(m.tags));
+const itemPics = (...ids: string[]): Pic[] => ids.map((id) => lookFor(DEMO_ITEMS.find((w) => w.id === `demo:${id}`)!.tags));
 
 export const STYLE_OPTIONS: { label: string; pics: Pic[] }[] = [
   { label: 'Thanh lịch', pics: outfitPics('navy-business') },
@@ -39,7 +35,9 @@ export function StylePicker({ value, onChange }: { value: string[]; onChange: (v
           <Pressable key={s.label} onPress={() => onChange(toggleLabel(value, s.label)[0])} accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={s.label} style={[styles.styleCard, on && styles.cardOn]}>
             <View style={styles.pics}>
               {s.pics.map((p, i) => (
-                <Image key={i} source={p} style={s.pics.length === 1 ? styles.picFull : styles.picQuarter} contentFit="contain" />
+                <View key={i} style={styles.pic}>
+                  <GarmentIcon look={p} size={46} />
+                </View>
               ))}
             </View>
             <View style={styles.styleLabel}>
@@ -104,8 +102,7 @@ const styles = StyleSheet.create({
   styleCard: { width: '47%', flexGrow: 1, borderRadius: radius.md, backgroundColor: colors.surface, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent' },
   cardOn: { borderColor: colors.accent },
   pics: { height: 120, flexDirection: 'row', flexWrap: 'wrap', padding: 6, backgroundColor: colors.studio },
-  picFull: { width: '100%', height: '100%' },
-  picQuarter: { width: '50%', height: '50%' },
+  pic: { width: '50%', height: '50%', alignItems: 'center', justifyContent: 'center' },
   styleLabel: { flexDirection: 'row', alignItems: 'center', padding: space.md },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: { minHeight: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center', backgroundColor: colors.surface },

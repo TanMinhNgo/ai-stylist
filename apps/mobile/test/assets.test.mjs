@@ -1,24 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ALL_TYPES, clampCrop, cropValid, done, ideaRequest, keyFor, MAX_ASSET_POLLS, pollDelay, pollGaveUp, quotaProblem, typesFor } from '../src/features/assets/logic.ts';
+import { clampCrop, cropValid, done, keyFor, MAX_ASSET_POLLS, pollDelay, pollGaveUp, typesFor } from '../src/features/assets/logic.ts';
 
-test('idea form: outfit has no type, single-item menus need a type from that menu', () => {
-  assert.deepEqual(ideaRequest('outfit', 'shirt', ' bộ đi làm ', 'f'), { menu: 'outfit', prompt: 'bộ đi làm', bodyKey: 'f' });
-  assert.equal(ideaRequest('top', null, 'sơ mi', 'm'), null);
-  assert.equal(ideaRequest('top', 'jeans', 'sơ mi', 'm'), null, 'type outside the menu');
-  assert.equal(ideaRequest('jewelry', 'ring', 'nhẫn bạc', 'm').type, 'ring');
-  assert.equal(ideaRequest('top', 'shirt', '   ', 'm'), null, 'empty prompt');
+test('a garment photo picks one type from a single-item menu', () => {
   assert.ok(typesFor('jewelry').includes('earrings'));
-  assert.ok(!ALL_TYPES.some((t) => ['underwear', 'swimwear', 'sleepwear'].includes(t)));
-});
-
-test('quota: disabled and short batches are refused whole, enough quota passes', () => {
-  assert.match(quotaProblem({ enabled: false, remaining: 5 }, 1), /chưa bật/);
-  assert.match(quotaProblem({ enabled: true, remaining: 2 }, 3), /Cần 3 lượt.*còn 2/);
-  assert.match(quotaProblem({ enabled: true, remaining: 0 }, 1), /hết lượt/);
-  assert.equal(quotaProblem({ enabled: true, remaining: 4 }, 4), null);
-  assert.ok(quotaProblem(undefined, 1), 'unknown quota never lets a batch through');
 });
 
 test('polling backs off, is bounded and stops on a final status', () => {

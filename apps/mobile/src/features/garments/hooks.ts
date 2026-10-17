@@ -68,9 +68,9 @@ export function useAddGarments() {
   return { state, add, cancel: () => abort.current?.abort(), dismiss: () => setState(null) };
 }
 
-type UploadOne = { image: LocalImage; extra: Pick<CreateGarmentRequest, 'generateAsset' | 'bodyKey' | 'requestedType'>; signal: AbortSignal; onProgress: (f: number) => void };
+type UploadOne = { image: LocalImage; extra: Pick<CreateGarmentRequest, 'requestedType'>; signal: AbortSignal; onProgress: (f: number) => void };
 
-/** One cropped garment photo; with generateAsset the API makes its mannequin PNG after analysis (or defers it without quota). */
+/** One cropped garment photo with the type the user picked. */
 export function useUploadGarment() {
   const client = useQueryClient();
   return useMutation({

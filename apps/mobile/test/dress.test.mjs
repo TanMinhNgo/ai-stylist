@@ -52,5 +52,9 @@ test('every outfit dresses both bodies with finite, non-empty meshes', () => {
       }
     }
     assert.equal(fig.children.filter((c) => c.material === skin).length, 1, 'skin material is reused, not disposed');
+    const bare = fig.children.find((c) => c.material === skin);
+    assert.equal(bare.children.length, 1, 'body has an ink outline sharing its geometry');
+    assert.equal(bare.children[0].geometry, bare.geometry);
+    assert.ok(fig.children.filter((c) => c.geometry.type === 'CircleGeometry' && c.material.isMeshBasicMaterial).length >= 6, 'flat anime eyes');
   }
 });

@@ -1,5 +1,4 @@
 import type { GarmentSlot } from '@stylist/shared';
-import { useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -12,7 +11,9 @@ import { useGarments } from '@/features/garments/hooks';
 import { useDefaultModelPhoto, useModelPhotos } from '@/features/model-photos/hooks';
 import { CASUAL_OUTFITS, DEMO_ITEMS, DEMO_OUTFITS, type DemoOutfit } from '@/features/studio/catalog';
 import { Mannequin3D } from '@/features/studio/Mannequin3D';
-import { garmentWearable, pickKey, stagePlan, type Wearable } from '@/features/studio/outfit';
+import { GarmentIcon } from '@/features/studio/GarmentIcon';
+import { lookFor } from '@/features/studio/looks';
+import { garmentWearable, pickKey, type Wearable } from '@/features/studio/outfit';
 import { useStudio } from '@/features/studio/store';
 import { newIdempotencyKey, useCreateTryOn, useTryOnJob } from '@/features/try-on/hooks';
 import { messageFor } from '@/lib/errors';
@@ -39,8 +40,7 @@ const DEMO_TABS = [{ label: 'Bộ phối sẵn', slots: [] as GarmentSlot[] }, .
 export default function StudioScreen() {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const client = useQueryClient();
-  const { body, picks, preset, occasion, setBody, toggle, wearOutfit, setOccasion } = useStudio();
+  const { body, picks, occasion, setBody, toggle, wearOutfit, setOccasion } = useStudio();
   const [demo, setDemo] = useState(false);
   const [tab, setTab] = useState(0);
   const [outfitSection, setOutfitSection] = useState<'formal' | 'casual'>('formal');
@@ -67,8 +67,6 @@ export default function StudioScreen() {
   // Demo pieces have no API id: they only dress the mannequin and are never sent to /try-on.
   const forTryOn = worn.filter((w) => w.garmentId && w.tryOnAllowed);
   const tooMany = forTryOn.length > TRY_ON_MAX;
-  // Real garments whose PNG was made for the other body: shown as 3D proxies, offer a variant.
-  const mismatched = useMemo(() => stagePlan(picks, preset, body, 'front').mismatched.filter((w) => w.garmentId), [picks, preset, body]);
 
   const bottomSpace = Platform.OS === 'ios' ? space.sm : insets.bottom + FLOATING_TAB_BAR_SPACE;
 
@@ -117,10 +115,7 @@ export default function StudioScreen() {
           <Mannequin3D
             body={body}
             picks={picks}
-            preset={preset}
             skin={skin}
-            // Signed PNG URLs last 15 minutes; refetch the wardrobe for fresh ones.
-            onSpriteError={() => void client.invalidateQueries({ queryKey: ['garments'] })}
             style={styles.figure}
           />
           <View style={styles.stageBar} pointerEvents="box-none">
@@ -164,16 +159,6 @@ export default function StudioScreen() {
               ))}
             </View>
           </View>
-
-          {mismatched.length ? (
-            <Pressable onPress={() => router.push({ pathname: '/garment/[id]', params: { id: mismatched[0].garmentId! } })} accessibilityRole="button" style={styles.notice}>
-              <Icon ios="info.circle" android="info" size={16} color={colors.warning} />
-              <Text variant="caption" style={{ flex: 1 }}>
-                {mismatched.length} món chưa có hình cho dáng {body === 'f' ? 'nữ' : 'nam'}, đang hiện mô phỏng 3D.
-              </Text>
-              <Text variant="caption" color={colors.accent} style={{ fontWeight: '600' }}>Tạo biến thể</Text>
-            </Pressable>
-          ) : null}
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
             {tabs.map((t, i) => {
@@ -276,12 +261,7 @@ function TrayItem({ item, on, onPress }: { item: Wearable; on: boolean; onPress:
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={item.label} style={styles.item}>
       <View style={[styles.itemThumb, on && styles.itemOn]}>
-        {item.thumb ? (
-          <Image source={{ uri: item.thumb }} style={StyleSheet.absoluteFill} contentFit="cover" recyclingKey={item.id} />
-        ) : item.sprite ? (
-          <Image source={item.sprite.source} style={styles.inset} contentFit="contain" recyclingKey={item.id} />
-        ) : null}
-        {item.sprite && item.garmentId ? <View style={styles.pngDot} accessibilityLabel="Có hình cho ma nơ canh" /> : null}
+        <GarmentIcon look={lookFor(item.tags)} />
       </View>
       <Text variant="caption" numberOfLines={1} style={{ fontSize: 11 }}>{item.label}</Text>
     </Pressable>
@@ -292,11 +272,9 @@ function OutfitItem({ outfit, on, onPress }: { outfit: DemoOutfit; on: boolean; 
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={`${outfit.label}, ${outfit.bodyKey ? `người mẫu ${outfit.bodyKey === 'f' ? 'nữ' : 'nam'}` : `${outfit.members.length} món, giữ dáng hiện tại`}`} style={styles.item}>
       <View style={[styles.itemThumb, on && styles.itemOn]}>
-        {outfit.image ? <Image source={outfit.image} style={styles.inset} contentFit="contain" /> : (
-          <View style={styles.outfitGrid}>
-            {outfit.members.map((w) => <Image key={w.id} source={w.sprite?.source} style={{ width: '50%', height: '50%' }} contentFit="contain" />)}
-          </View>
-        )}
+        <View style={styles.outfitGrid}>
+          {outfit.members.slice(0, 4).map((w) => <GarmentIcon key={w.id} look={lookFor(w.tags)} size={32} />)}
+        </View>
       </View>
       <Text variant="caption" numberOfLines={1} style={{ fontSize: 11 }}>{outfit.label}</Text>
     </Pressable>
@@ -324,7 +302,7 @@ function ActiveJobBanner({ id }: { id: string }) {
 }
 
 const styles = StyleSheet.create({
-  outfitGrid: { flex: 1, padding: 4, flexDirection: 'row', flexWrap: 'wrap' },
+  outfitGrid: { width: 64, flexDirection: 'row', flexWrap: 'wrap' },
   jobBanner: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 44, paddingHorizontal: space.md, borderRadius: radius.md, backgroundColor: 'rgba(255,255,255,0.85)' },
   root: { flex: 1, backgroundColor: colors.studio },
   header: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: space.xl, paddingTop: space.sm, zIndex: 1 },
@@ -343,13 +321,10 @@ const styles = StyleSheet.create({
   tabOn: { backgroundColor: colors.ink },
   tabDot: { width: 6, height: 6, borderRadius: 3 },
   item: { width: 72, alignItems: 'center', gap: 4 },
-  itemThumb: { width: 72, height: 72, borderRadius: radius.md + 2, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.8)' },
+  itemThumb: { width: 72, height: 72, borderRadius: radius.md + 2, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.8)', alignItems: 'center', justifyContent: 'center' },
   itemOn: { borderWidth: 2.5, borderColor: colors.accent },
-  inset: { position: 'absolute', top: 4, left: 4, right: 4, bottom: 4 },
-  pngDot: { position: 'absolute', right: 5, top: 5, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
   source: { flexDirection: 'row', padding: 2, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.75)' },
   sourceItem: { height: 28, paddingHorizontal: 10, borderRadius: radius.pill, justifyContent: 'center' },
-  notice: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: space.md, minHeight: 36, borderRadius: radius.sm, backgroundColor: 'rgba(255,255,255,0.85)' },
   addThumb: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(0,0,0,0.25)', backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
   chip: { height: 34, paddingHorizontal: 14, borderRadius: 17, justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.75)' },
   input: { ...type.callout, height: 42, borderRadius: radius.sm, backgroundColor: 'rgba(255,255,255,0.85)', paddingHorizontal: space.md, color: colors.ink },

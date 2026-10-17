@@ -12,7 +12,7 @@ const smooth = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
-/** Short hair as 0..1 per vertex around the head centre; soft edges give a natural hairline instead of mesh steps. */
+/** Short hair as 0..1 per vertex around the head centre. */
 function hairMask(m: Body) {
   const { lm, pos, reg } = m;
   const cy = lm.hairTop - 0.11, cz = lm.faceFront - 0.1;
@@ -28,22 +28,10 @@ function hairMask(m: Body) {
   return mask;
 }
 
+/** Anime hair: a solid shell over the scalp with a hard hairline (cel style, no soft alpha). */
 function hairGeo(m: Body) {
   const mask = hairMask(m);
-  const pos = new Float32Array(m.n * 3), col = new Float32Array(m.n * 4).fill(1);
-  for (let i = 0; i < m.n; i++) {
-    const e = 0.0015 + 0.007 * mask[i];
-    for (let k = 0; k < 3; k++) pos[i * 3 + k] = m.pos[i * 3 + k] + m.nrm[i * 3 + k] * e;
-    col[i * 4 + 3] = mask[i];
-  }
-  const index: number[] = [];
-  for (let t = 0; t < m.idx.length; t += 3) if (mask[m.idx[t]] + mask[m.idx[t + 1]] + mask[m.idx[t + 2]] > 0.02) index.push(m.idx[t], m.idx[t + 1], m.idx[t + 2]);
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  g.setAttribute('color', new THREE.BufferAttribute(col, 4));
-  g.setIndex(index);
-  g.computeVertexNormals();
-  return g;
+  return part(m, (i) => mask[i] > 0.5, (i) => 0.003 + 0.012 * mask[i]);
 }
 
 /** Triangles whose 3 vertices pass keep(i), pushed out along the body normal by ease (metres or per vertex). */
@@ -121,6 +109,83 @@ function halfWidthAt(m: Body, y: number) {
   return w;
 }
 
+// Cel shading: three flat light bands instead of smooth falloff.
+let bands: THREE.DataTexture | null = null;
+function gradient() {
+  if (!bands) {
+    bands = new THREE.DataTexture(new Uint8Array([140, 140, 140, 255, 205, 205, 205, 255, 255, 255, 255, 255]), 3, 1);
+    bands.minFilter = bands.magFilter = THREE.NearestFilter;
+    bands.needsUpdate = true;
+  }
+  return bands;
+}
+export const toon = (color: string) => new THREE.MeshToonMaterial({ color, gradientMap: gradient(), side: THREE.DoubleSide });
+
+// Ink outline (inverted hull): back faces of the same geometry pushed out along the normal in screen space,
+// so the line keeps one width whatever the piece's scale.
+const OUTLINE = new THREE.MeshBasicMaterial({ color: '#1d1b22', side: THREE.BackSide });
+OUTLINE.onBeforeCompile = (shader) => {
+  shader.vertexShader = shader.vertexShader.replace(
+    '#include <project_vertex>',
+    `#include <project_vertex>
+    vec2 inkDir = (projectionMatrix * vec4(normalize(normalMatrix * normal), 0.0)).xy;
+    gl_Position.xy += inkDir / max(length(inkDir), 1e-4) * 0.005 * gl_Position.w;`,
+  );
+};
+// Shared by every outline mesh; the default program cache key would ignore the shader patch.
+OUTLINE.customProgramCacheKey = () => 'ink-outline';
+
+type Add = (geo: THREE.BufferGeometry, mat: THREE.Material, x?: number, y?: number, z?: number) => THREE.Mesh;
+
+/** Flat anime eyes, brows and mouth laid on the face where the modelled eyes sit. Unlit, like ink and paint. */
+function animeFace(m: Body, add: Add) {
+  const { reg, pos, lm } = m;
+  const s = lm.knee / 0.5;
+  const paint = (color: string) => new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide });
+  const oval = (rx: number, ry: number, color: string, x: number, y: number, z: number, turn: number) => {
+    const o = add(new THREE.CircleGeometry(1, 32), paint(color), x, y, z);
+    o.scale.set(rx * s, ry * s, 1);
+    o.rotation.y = turn;
+  };
+  const bar = (w: number, h: number, color: string, x: number, y: number, z: number, turn: number, tilt: number) => {
+    const o = add(new THREE.PlaneGeometry(w * s, h * s), paint(color), x, y, z);
+    o.rotation.set(0, turn, tilt);
+  };
+  let eyeY = 0;
+  for (const k of [-1, 1]) {
+    let n = 0, x = 0, y = 0;
+    for (let i = 0; i < m.n; i++)
+      if (reg[i] === R.eye && pos[i * 3] * k > 0) {
+        n++;
+        x += pos[i * 3];
+        y += pos[i * 3 + 1];
+      }
+    if (!n) continue;
+    x /= n;
+    y /= n;
+    eyeY = y;
+    // Paint just in front of whatever is most forward over the eye (lids sit ahead of the eyeball).
+    let z = -1;
+    for (let i = 0; i < m.n; i++)
+      if ((reg[i] === R.head || reg[i] >= R.eye) && Math.abs(pos[i * 3] - x) < 0.019 && Math.abs(pos[i * 3 + 1] - y) < 0.02) z = Math.max(z, pos[i * 3 + 2]);
+    z += 0.0015;
+    // The face curves away from the nose: each eye turns with it.
+    const t = k * 0.2, d = 0.0004;
+    oval(0.018, 0.021, '#FFFFFF', x, y, z, t);
+    oval(0.0125, 0.0175, '#5A3A2A', x, y - 0.002 * s, z + d, t);
+    oval(0.0065, 0.0105, '#1A1210', x, y - 0.002 * s, z + 2 * d, t);
+    oval(0.004, 0.004, '#FFFFFF', x - 0.005 * s, y + 0.005 * s, z + 3 * d, t);
+    bar(0.042, 0.005, '#1d1b22', x, y + 0.019 * s, z + 3 * d, t, -k * 0.12);
+    bar(0.03, 0.0032, '#3A2A24', x, y + 0.04 * s, z, t, -k * 0.05);
+  }
+  if (!eyeY) return;
+  const mouthY = eyeY - 0.079 * s;
+  let front = -1;
+  for (let i = 0; i < m.n; i++)
+    if (reg[i] === R.head && Math.abs(pos[i * 3]) < 0.008 && Math.abs(pos[i * 3 + 1] - mouthY) < 0.006) front = Math.max(front, pos[i * 3 + 2]);
+  bar(0.013, 0.0025, '#8C4A48', 0, mouthY, front + 0.001, 0, 0);
+}
+
 /** Soft round contact shadow (cheaper and more robust on phones than shadow maps). */
 export function contactShadow() {
   const size = 64, data = new Uint8Array(size * size * 4);
@@ -138,9 +203,10 @@ export function contactShadow() {
 }
 
 /** Rebuilds `fig` as the body wearing `looks`. Previous children are disposed except the shared skin material. */
-export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Material, hidden: number[] = []) {
+export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Material) {
   for (const o of [...fig.children] as THREE.Mesh[]) {
     fig.remove(o);
+    // Outlines are children sharing this geometry, so it is disposed once here.
     o.geometry.dispose();
     if (o.material !== skin) (o.material as THREE.Material).dispose();
   }
@@ -151,27 +217,35 @@ export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Mate
     const o = new THREE.Mesh(geo, mat);
     o.position.set(x, y, z);
     fig.add(o);
+    geo.computeBoundingSphere();
+    // Tiny pieces (rings, chains, frames) would turn into black blobs under a fixed-width outline.
+    if (!mat.transparent && geo.boundingSphere!.radius > 0.04) {
+      // A child, so it follows the scale and rotation callers set on the returned mesh.
+      o.add(new THREE.Mesh(geo, OUTLINE));
+    }
     return o;
   };
-  // Same fabric as the design: physical sheen gives cloth its soft rim instead of a plastic look.
-  const cloth = (color: string, roughness = 0.8) => new THREE.MeshPhysicalMaterial({ color, roughness, sheen: 0.8, sheenRoughness: 0.7, sheenColor: new THREE.Color(0.35, 0.35, 0.35), side: THREE.DoubleSide });
-  const metal = (color: string) => new THREE.MeshStandardMaterial({ color, metalness: 0.9, roughness: 0.3 });
   const tube = (pts: number[][], r: number, mat: THREE.Material) =>
     add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p[0], p[1], p[2]))), 64, r, 8, false), mat);
   const get = <P extends Look['part']>(p: P) => looks.find((l) => l.part === p) as Extract<Look, { part: P }> | undefined;
 
-  // MakeHuman body (scripts/mannequin/human.py). Regions under a front PNG are left out (see outfit.ts covers).
-  add(part(m, (i) => reg[i] < R.eye && !hidden.includes(reg[i]), 0), skin);
-  add(hairGeo(m), new THREE.MeshPhysicalMaterial({ color: '#1F1A17', roughness: 0.55, sheen: 0.6, sheenRoughness: 0.4, sheenColor: new THREE.Color('#5a4a40'), vertexColors: true, transparent: true }));
-  add(part(m, (i) => reg[i] === R.eye, 0), new THREE.MeshStandardMaterial({ color: '#F2EEE8', roughness: 0.2 }));
-  add(part(m, (i) => reg[i] === R.iris, 0), new THREE.MeshStandardMaterial({ color: '#2A1D16', roughness: 0.15 }));
-  add(new THREE.CylinderGeometry(0.21, 0.22, 0.012, 64), new THREE.MeshStandardMaterial({ color: '#2A2A2E', roughness: 0.35, metalness: 0.4 }), 0, -0.006, 0);
+  // MakeHuman body (scripts/mannequin/human.py). The modelled eyes are left out: animeFace draws flat ones.
+  add(part(m, (i) => reg[i] < R.eye, 0), skin);
+  const hair = toon('#2E2420');
+  add(hairGeo(m), hair);
+  // Female: long anime hair falling behind the shoulders.
+  if (lm.female) {
+    const len = lm.headY - (lm.collar - 0.12 * s);
+    add(new THREE.CapsuleGeometry(lm.headRx * 0.98, len, 8, 24), hair, 0, lm.headY - len / 2, lm.headZ - lm.headRz * 0.45).scale.z = 0.55;
+  }
+  animeFace(m, add);
+  add(new THREE.CylinderGeometry(0.21, 0.22, 0.012, 64), toon('#2A2A2E'), 0, -0.006, 0);
 
   const skirtHem = { mini: lm.crotch - 0.07 * H, midi: lm.knee - 0.05 * H, maxi: lm.ankle + 0.035 * H, aodai: lm.ankle + 0.1 * H, knee: lm.knee - 0.02 * H };
   const skirtFlare = { mini: 0.02, midi: 0.05, maxi: 0.08, aodai: 0.03, knee: 0.05 };
   let lowerEase = 0;
 
-  type ShellSpec = { color: string; sleeve: 'none' | 'short' | 'three' | 'long'; neck?: 'crew' | 'v' | 'scoop' | 'turtle' | 'mandarin'; open?: number; rough?: number };
+  type ShellSpec = { color: string; sleeve: 'none' | 'short' | 'three' | 'long'; neck?: 'crew' | 'v' | 'scoop' | 'turtle' | 'mandarin'; open?: number };
   const shell = (g: ShellSpec, ease: number | ((i: number) => number), hem: number) => {
     const collar = lm.collar, shortCut = lm.armpit - 0.07 * H, threeCut = lm.wrist + 0.09 * H, wristCut = lm.wrist + 0.01 * H;
     const neckTop = Math.min(collar + (g.neck === 'turtle' ? 0.045 : 0.025) * H, lm.headY - lm.headRy * 0.75);
@@ -189,7 +263,7 @@ export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Mate
       if (r === R.head) return (g.neck === 'turtle' || g.neck === 'mandarin') && y < neckTop;
       return false;
     };
-    return add(part(m, keep, ease), cloth(g.color, g.rough));
+    return add(part(m, keep, ease), toon(g.color));
   };
   const pants = (color: string, len: 'full' | 'crop' | 'shorts', wide: number, ease: number) => {
     const cut = len === 'shorts' ? lm.knee + 0.13 * H : len === 'crop' ? lm.ankle + 0.07 * H : lm.ankle + 0.012 * H;
@@ -206,23 +280,23 @@ export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Mate
       }
       geo.computeVertexNormals();
     }
-    return add(geo, cloth(color));
+    return add(geo, toon(color));
   };
 
   const dressLook = get('dress'), top = get('top'), outer = get('outer');
   const bottom = (get('pants') ?? get('skirt')) as Extract<Look, { part: 'pants' | 'skirt' }> | undefined;
-  // Neutral base layer so the realistic body is never shown bare where nothing is worn.
-  const base = cloth('#B7B1AA', 0.85);
-  if (!dressLook && !bottom && !hidden.includes(R.pelvis))
+  // Neutral base layer so the body is never shown bare where nothing is worn.
+  const base = toon('#B7B1AA');
+  if (!dressLook && !bottom)
     add(part(m, (i) => (reg[i] === R.pelvis || (reg[i] === R.thigh && Y(i) > lm.crotch - 0.03)) && Y(i) < lm.hipY + 0.05, 0.003), base);
-  if (lm.female && !dressLook && !top && !outer && !hidden.includes(R.torso))
+  if (lm.female && !dressLook && !top && !outer)
     add(part(m, (i) => reg[i] === R.torso && Y(i) > lm.bustY - 0.06 && Y(i) < lm.bustY + 0.045, 0.004), base);
   if (dressLook) {
-    shell({ color: dressLook.color, sleeve: dressLook.sleeve, neck: dressLook.aodai ? 'mandarin' : dressLook.sleeve === 'none' ? 'scoop' : 'crew', rough: 0.5 }, 0.007, lm.waist - 0.03 * H);
+    shell({ color: dressLook.color, sleeve: dressLook.sleeve, neck: dressLook.aodai ? 'mandarin' : dressLook.sleeve === 'none' ? 'scoop' : 'crew' }, 0.007, lm.waist - 0.03 * H);
     if (dressLook.jump !== 'no') pants(dressLook.color, dressLook.jump === 'shorts' ? 'shorts' : 'full', 0.03, 0.012);
     else {
       if (dressLook.aodai) pants('#F4F1EA', 'full', 0.025, 0.012);
-      add(skirtGeo(m, { top: lm.waist, hem: skirtHem[dressLook.hem], ease: 0.014, flare: skirtFlare[dressLook.hem], slits: dressLook.aodai ? 0.3 : 0 }), cloth(dressLook.color, 0.5));
+      add(skirtGeo(m, { top: lm.waist, hem: skirtHem[dressLook.hem], ease: 0.014, flare: skirtFlare[dressLook.hem], slits: dressLook.aodai ? 0.3 : 0 }), toon(dressLook.color));
     }
     lowerEase = 0.02;
   } else {
@@ -231,37 +305,37 @@ export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Mate
       lowerEase = bottom.ease;
     }
     if (bottom?.part === 'skirt') {
-      add(skirtGeo(m, { top: lm.waist, hem: skirtHem[bottom.hem], ease: 0.012, flare: skirtFlare[bottom.hem], pleats: bottom.pleats }), cloth(bottom.color, 0.6));
+      add(skirtGeo(m, { top: lm.waist, hem: skirtHem[bottom.hem], ease: 0.012, flare: skirtFlare[bottom.hem], pleats: bottom.pleats }), toon(bottom.color));
       lowerEase = 0.02;
     }
     if (top) {
       const tucked = top.tuck && !!bottom;
       const below = lowerEase + 0.005;
       shell(top, tucked ? top.ease : (i) => (Y(i) < lm.waist ? Math.max(top.ease, below) : top.ease), tucked ? lm.waist - 0.03 * H : top.hem === 'crop' ? lm.waist + 0.07 * H : lm.crotch + 0.03 * H);
-      if (top.collar) add(new THREE.TorusGeometry(lm.neckR + 0.012, 0.007, 8, 40), cloth(top.color), 0, lm.collar + 0.004, 0.004).rotation.x = Math.PI / 2 - 0.25;
-      if (top.hood) add(new THREE.SphereGeometry(1, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.6), cloth(top.color), 0, lm.collar + 0.01, depthAt(m, lm.collar, true) - 0.035).scale.set(0.12 * s, 0.07 * s, 0.07 * s);
+      if (top.collar) add(new THREE.TorusGeometry(lm.neckR + 0.012, 0.007, 8, 40), toon(top.color), 0, lm.collar + 0.004, 0.004).rotation.x = Math.PI / 2 - 0.25;
+      if (top.hood) add(new THREE.SphereGeometry(1, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.6), toon(top.color), 0, lm.collar + 0.01, depthAt(m, lm.collar, true) - 0.035).scale.set(0.12 * s, 0.07 * s, 0.07 * s);
     }
   }
   if (outer) {
-    shell({ color: outer.color, sleeve: outer.sleeve, open: 0.06, rough: 0.75 }, (i) => (Y(i) < lm.waist ? Math.max(outer.ease, lowerEase + 0.012) : outer.ease), outer.coat ? lm.waist - 0.02 * H : lm.crotch + 0.03 * H);
-    if (outer.coat) add(skirtGeo(m, { top: lm.waist, hem: skirtHem.knee, ease: Math.max(0.035, lowerEase + 0.02), flare: 0.06, front: 0.12 }), cloth(outer.color, 0.75));
+    shell({ color: outer.color, sleeve: outer.sleeve, open: 0.06 }, (i) => (Y(i) < lm.waist ? Math.max(outer.ease, lowerEase + 0.012) : outer.ease), outer.coat ? lm.waist - 0.02 * H : lm.crotch + 0.03 * H);
+    if (outer.coat) add(skirtGeo(m, { top: lm.waist, hem: skirtHem.knee, ease: Math.max(0.035, lowerEase + 0.02), flare: 0.06, front: 0.12 }), toon(outer.color));
   }
 
   const shoes = get('shoes');
   if (shoes) {
     if (shoes.style === 'sandal') {
-      add(part(m, (i) => reg[i] === R.foot && Y(i) < 0.012 * H, 0.006), cloth(shoes.color, 0.5));
-      add(part(m, (i) => (reg[i] === R.foot && Z(i) > 0.06 * s && Z(i) < 0.085 * s) || ((reg[i] === R.foot || reg[i] === R.calf) && Math.abs(Y(i) - (lm.ankle + 0.004)) < 0.008), 0.007), cloth(shoes.color, 0.5));
+      add(part(m, (i) => reg[i] === R.foot && Y(i) < 0.012 * H, 0.006), toon(shoes.color));
+      add(part(m, (i) => (reg[i] === R.foot && Z(i) > 0.06 * s && Z(i) < 0.085 * s) || ((reg[i] === R.foot || reg[i] === R.calf) && Math.abs(Y(i) - (lm.ankle + 0.004)) < 0.008), 0.007), toon(shoes.color));
     } else {
       const shaft = shoes.style === 'boot' ? lm.ankle + 0.07 * H : 0;
-      add(part(m, (i) => reg[i] === R.foot || (!!shaft && reg[i] === R.calf && Y(i) < shaft), shoes.style === 'boot' ? Math.max(0.01, lowerEase + 0.006) : 0.006), cloth(shoes.color, 0.4));
-      if (shoes.style === 'sneaker') add(part(m, (i) => reg[i] === R.foot && Y(i) < 0.016 * H, 0.011), cloth('#E2E2E2', 0.6));
+      add(part(m, (i) => reg[i] === R.foot || (!!shaft && reg[i] === R.calf && Y(i) < shaft), shoes.style === 'boot' ? Math.max(0.01, lowerEase + 0.006) : 0.006), toon(shoes.color));
+      if (shoes.style === 'sneaker') add(part(m, (i) => reg[i] === R.foot && Y(i) < 0.016 * H, 0.011), toon('#E2E2E2'));
     }
   }
 
   const bag = get('bag');
   if (bag) {
-    const mat = cloth(bag.color, 0.5), hx = lm.handX, hy = lm.handY, hz = lm.handZ;
+    const mat = toon(bag.color), hx = lm.handX, hy = lm.handY, hz = lm.handZ;
     if (bag.style === 'tote') {
       add(new THREE.BoxGeometry(0.09, 0.26, 0.3), mat, hx + 0.01, hy - 0.22, hz);
       add(new THREE.TorusGeometry(0.075, 0.007, 8, 32, Math.PI), mat, hx + 0.01, hy - 0.09, hz).rotation.y = Math.PI / 2;
@@ -281,7 +355,7 @@ export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Mate
 
   const hat = get('hat');
   if (hat) {
-    const { headY: cy, headZ: cz, headRx: rx, headRy: ry, headRz: rz } = lm, zr = rz / rx, hm = cloth(hat.color, 0.85);
+    const { headY: cy, headZ: cz, headRx: rx, headRy: ry, headRz: rz } = lm, zr = rz / rx, hm = toon(hat.color);
     if (hat.style === 'beanie') {
       add(new THREE.SphereGeometry(1, 40, 20, 0, Math.PI * 2, 0, Math.PI * 0.43), hm, 0, cy + 0.005, cz).scale.set(rx + 0.012, ry + 0.012, rz + 0.012);
       add(new THREE.CylinderGeometry(1, 1, 0.045, 40, 1, true), hm, 0, cy + ry * 0.3, cz).scale.set(rx + 0.015, 1, rz + 0.015);
@@ -293,17 +367,17 @@ export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Mate
     } else {
       add(new THREE.CylinderGeometry(rx * 0.82, rx * 0.95 + 0.012, 0.11, 40), hm, 0, cy + ry * 0.62, cz).scale.z = zr;
       add(new THREE.CylinderGeometry(rx + 0.085, rx + 0.085, 0.006, 48), hm, 0, cy + ry * 0.36, cz).scale.z = zr * 0.95;
-      add(new THREE.CylinderGeometry(rx * 0.95 + 0.013, rx * 0.95 + 0.013, 0.022, 40, 1, true), cloth('#1E1B18', 0.6), 0, cy + ry * 0.42, cz).scale.z = zr;
+      add(new THREE.CylinderGeometry(rx * 0.95 + 0.013, rx * 0.95 + 0.013, 0.022, 40, 1, true), toon('#1E1B18'), 0, cy + ry * 0.42, cz).scale.z = zr;
     }
   }
 
   const eye = get('eyewear');
   if (eye) {
-    const em = new THREE.MeshStandardMaterial({ color: eye.color, metalness: eye.tint ? 0.9 : 0.1, roughness: 0.3 });
+    const em = toon(eye.color);
     const ey = lm.headY + lm.headRy * 0.02, ez = lm.headZ + lm.headRz + 0.012, ex = 0.034 * s;
     for (const k of [-1, 1]) {
       add(new THREE.TorusGeometry(0.021, 0.0028, 8, 32), em, k * ex, ey, ez);
-      if (eye.tint) add(new THREE.CircleGeometry(0.021, 32), new THREE.MeshStandardMaterial({ color: '#1a1a1a', transparent: true, opacity: 0.85, roughness: 0.1 }), k * ex, ey, ez);
+      if (eye.tint) add(new THREE.CircleGeometry(0.021, 32), new THREE.MeshBasicMaterial({ color: '#1a1a1a', transparent: true, opacity: 0.85 }), k * ex, ey, ez);
       add(new THREE.BoxGeometry(0.003, 0.004, lm.headRz + 0.01), em, k * (lm.headRx + 0.002), ey + 0.004, lm.headZ + lm.headRz * 0.45);
     }
     add(new THREE.CylinderGeometry(0.0025, 0.0025, ex * 2 - 0.042, 8), em, 0, ey + 0.006, ez).rotation.z = Math.PI / 2;
@@ -311,7 +385,7 @@ export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Mate
 
   const scarf = get('scarf');
   if (scarf) {
-    const sm = cloth(scarf.color, 0.95);
+    const sm = toon(scarf.color);
     add(new THREE.TorusGeometry(lm.neckR + 0.032, 0.024, 12, 40), sm, 0, lm.collar + 0.012, 0.004).rotation.x = Math.PI / 2 - 0.2;
     add(new THREE.BoxGeometry(0.075, 0.26, 0.018), sm, 0.05, lm.collar - 0.13, depthAt(m, lm.collar - 0.12) + 0.03).rotation.z = 0.07;
   }
@@ -319,13 +393,13 @@ export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Mate
   const belt = get('belt');
   if (belt) {
     const bY = lm.waist - 0.025 * H, bEase = Math.max(0.02, lowerEase + 0.008);
-    add(part(m, (i) => (reg[i] === R.torso || reg[i] === R.pelvis) && Math.abs(Y(i) - bY) < 0.016, bEase), cloth(belt.color, 0.4));
-    add(new THREE.BoxGeometry(0.04, 0.034, 0.008), metal('#C9A44C'), 0, bY, depthAt(m, bY) + bEase + 0.005);
+    add(part(m, (i) => (reg[i] === R.torso || reg[i] === R.pelvis) && Math.abs(Y(i) - bY) < 0.016, bEase), toon(belt.color));
+    add(new THREE.BoxGeometry(0.04, 0.034, 0.008), toon('#C9A44C'), 0, bY, depthAt(m, bY) + bEase + 0.005);
   }
 
   const necklace = get('necklace');
   if (necklace) {
-    const r0 = lm.neckR + 0.045, gold = metal(necklace.color), tilt = -(Math.PI / 2 - 0.45);
+    const r0 = lm.neckR + 0.045, gold = toon(necklace.color), tilt = -(Math.PI / 2 - 0.45);
     add(new THREE.TorusGeometry(r0, 0.0022, 8, 64), gold, 0, lm.collar - 0.012, -0.004).rotation.x = tilt;
     add(new THREE.SphereGeometry(0.008, 16, 12), gold, 0, lm.collar - 0.012 - Math.cos(tilt) * r0 - 0.009, -Math.sin(tilt) * r0);
   }
@@ -342,31 +416,31 @@ export function dress(fig: THREE.Group, m: Body, looks: Look[], skin: THREE.Mate
   const watch = get('watch');
   if (watch) {
     const { at, dir } = wristAt(-1);
-    ring(0.029 * s, 0.006, metal(watch.color), at, dir);
-    add(new THREE.CylinderGeometry(0.016, 0.016, 0.007, 24), new THREE.MeshStandardMaterial({ color: '#1C1C1F', roughness: 0.2 }), at.x - 0.034 * s, at.y, at.z).rotation.z = Math.PI / 2;
+    ring(0.029 * s, 0.006, toon(watch.color), at, dir);
+    add(new THREE.CylinderGeometry(0.016, 0.016, 0.007, 24), toon('#1C1C1F'), at.x - 0.034 * s, at.y, at.z).rotation.z = Math.PI / 2;
   }
 
   const bracelet = get('bracelet');
   if (bracelet) {
     const { at, dir } = wristAt(1);
-    ring(0.031 * s, 0.004, metal(bracelet.color), at, dir);
+    ring(0.031 * s, 0.004, toon(bracelet.color), at, dir);
   }
 
   const fingerRing = get('ring');
   if (fingerRing) {
     const { dir } = wristAt(1);
-    ring(0.009, 0.0025, metal(fingerRing.color), new THREE.Vector3(lm.handX + 0.004, lm.handY - 0.045 * s, lm.handZ + 0.012), dir);
+    ring(0.009, 0.0025, toon(fingerRing.color), new THREE.Vector3(lm.handX + 0.004, lm.handY - 0.045 * s, lm.handZ + 0.012), dir);
   }
 
   const earrings = get('earrings');
   if (earrings) {
-    const em = metal(earrings.color);
+    const em = toon(earrings.color);
     for (const k of [-1, 1]) add(new THREE.SphereGeometry(0.0075, 16, 12), em, k * (lm.headRx + 0.002), lm.headY - lm.headRy * 0.32, lm.headZ);
   }
 
   const tie = get('tie');
   if (tie) {
-    const tm = cloth(tie.color, 0.55), top = lm.collar - 0.012, bottom = lm.waist + 0.01, len = top - bottom;
+    const tm = toon(tie.color), top = lm.collar - 0.012, bottom = lm.waist + 0.01, len = top - bottom;
     // Over a tucked shirt the chest sits a few mm out; push the tie a little further than the shirt ease.
     const z = depthAt(m, (top + bottom) / 2) + 0.02;
     add(new THREE.BoxGeometry(0.02, 0.026, 0.014), tm, 0, top, depthAt(m, top) + 0.022);

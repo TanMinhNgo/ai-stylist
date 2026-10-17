@@ -1,4 +1,3 @@
-import type { BodyKey } from '@stylist/shared';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useRef, useState, type ReactNode } from 'react';
@@ -6,27 +5,23 @@ import { Alert, Linking, StyleSheet, View } from 'react-native';
 
 import { Button, Icon, Text } from '@/components/ui';
 import { CropBox } from '@/features/assets/CropBox';
-import { useAssetQuota } from '@/features/assets/hooks';
 import { clampCrop, cropValid, typesFor, type CropRect, type GenType, type MenuId } from '@/features/assets/logic';
-import { BodySwitch, QuotaLine, TypePicker } from '@/features/assets/pickers';
+import { TypePicker } from '@/features/assets/pickers';
 import { useUploadGarment } from '@/features/garments/hooks';
 import { uploadFlowMessage } from '@/features/media/upload-flow';
 import { cropImage, pickImages, type LocalImage } from '@/lib/image';
 import { colors, radius, space } from '@/theme';
 
 /** One garment per photo: pick its type, crop it out (people in the photo stay outside the frame), preview, upload. */
-export function AddFromPhoto({ initialBody }: { initialBody: BodyKey }) {
+export function AddFromPhoto() {
   const [menu, setMenu] = useState<MenuId>('top');
   const [type, setType] = useState<GenType | null>(null);
-  const [body, setBody] = useState(initialBody);
   const [photo, setPhoto] = useState<LocalImage | null>(null);
   const [crop, setCrop] = useState<CropRect | null>(null);
   const [preview, setPreview] = useState<LocalImage | null>(null);
   const [progress, setProgress] = useState(0);
   const abort = useRef<AbortController | null>(null);
-  const quota = useAssetQuota();
   const upload = useUploadGarment();
-  const generate = !!quota.data?.enabled;
 
   async function choose(camera: boolean) {
     const picked = await pickImages({ camera });
@@ -57,7 +52,7 @@ export function AddFromPhoto({ initialBody }: { initialBody: BodyKey }) {
     abort.current = controller;
     setProgress(0);
     upload.mutate(
-      { image: preview, extra: { generateAsset: generate, bodyKey: body, requestedType: type }, signal: controller.signal, onProgress: setProgress },
+      { image: preview, extra: { requestedType: type }, signal: controller.signal, onProgress: setProgress },
       { onSuccess: (g) => router.replace({ pathname: '/garment/[id]', params: { id: g.id } }) },
     );
   }
@@ -99,16 +94,6 @@ export function AddFromPhoto({ initialBody }: { initialBody: BodyKey }) {
         </View>
       </Section>
 
-      <Section title="3. Hình cho ma nơ canh">
-        <BodySwitch value={body} onChange={setBody} />
-        <QuotaLine quota={quota.data} />
-        <Text variant="footnote" color={colors.inkSecondary}>
-          {generate
-            ? 'Sau khi AI phân tích xong sẽ tự tạo hình chính diện cho ma nơ canh (1 lượt). Hết lượt thì món vẫn được lưu và chờ lượt sau.'
-            : 'Món sẽ được lưu vào tủ đồ; chưa tạo hình cho ma nơ canh.'}
-        </Text>
-      </Section>
-
       {upload.isPending ? (
         <View style={{ gap: space.sm }}>
           <Text variant="callout" style={{ fontWeight: '600' }}>Đang tải lên {Math.round(progress * 100)}%</Text>
@@ -118,7 +103,7 @@ export function AddFromPhoto({ initialBody }: { initialBody: BodyKey }) {
           <Button label="Hủy" variant="plain" onPress={() => abort.current?.abort()} />
         </View>
       ) : (
-        <Button label={generate ? 'Lưu & tạo hình' : 'Lưu vào tủ đồ'} onPress={send} disabled={!preview || !type} icon={<Icon ios="sparkles" android="auto_awesome" size={18} color="#FFFFFF" />} />
+        <Button label="Lưu vào tủ đồ" onPress={send} disabled={!preview || !type} icon={<Icon ios="arrow.up.circle" android="upload" size={18} color="#FFFFFF" />} />
       )}
       {upload.isError && !abort.current?.signal.aborted ? <Text variant="footnote" color={colors.danger}>{uploadFlowMessage(upload.error)}</Text> : null}
     </View>

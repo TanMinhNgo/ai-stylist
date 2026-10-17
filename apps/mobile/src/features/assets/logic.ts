@@ -1,18 +1,10 @@
-// Pure rules for AI garment assets (no React Native imports, tested in test/assets.test.mjs).
-import { GENERATION_MENUS, IdeaRequest, type BodyKey } from '@stylist/shared';
+// Pure rules for adding garments and polling jobs (no React Native imports, tested in test/assets.test.mjs).
+import { GENERATION_MENUS } from '@stylist/shared';
 
 export type MenuId = (typeof GENERATION_MENUS)[number]['id'];
 export type GenType = (typeof GENERATION_MENUS)[number]['types'][number];
 
 export const typesFor = (menu: MenuId): readonly GenType[] => GENERATION_MENUS.find((m) => m.id === menu)!.types;
-/** Every type an outfit proposal may use (all single-item menus). */
-export const ALL_TYPES: readonly GenType[] = GENERATION_MENUS.flatMap((m) => m.types);
-
-/** The body of POST /garment-ideas, or null while the form is incomplete (outfit has no type, others need one from their menu). */
-export function ideaRequest(menu: MenuId, type: GenType | null, prompt: string, bodyKey: BodyKey) {
-  const parsed = IdeaRequest.safeParse({ menu, prompt, bodyKey, ...(menu === 'outfit' || !type ? {} : { type }) });
-  return parsed.success ? parsed.data : null;
-}
 
 /** Give up polling a job after this many fetches (~6 minutes with the backoff below). */
 export const MAX_ASSET_POLLS = 40;
@@ -27,15 +19,6 @@ export function pollDelay(status: string | undefined, fetches: number): number |
 
 /** Polling stopped before the job finished: the UI offers a manual "Kiểm tra lại" instead of polling forever. */
 export const pollGaveUp = (status: string | undefined, fetches: number) => !done(status) && pollDelay(status, fetches) === false;
-
-/** Why a batch needing `need` generations cannot be sent, in Vietnamese; null when it can. Never sends a partial batch. */
-export function quotaProblem(quota: { enabled: boolean; remaining: number } | undefined, need: number): string | null {
-  if (!quota) return 'Đang kiểm tra lượt tạo hình…';
-  if (!quota.enabled) return 'Tạo hình cho ma nơ canh đang thử nghiệm và chưa bật cho tài khoản của bạn.';
-  if (need > quota.remaining)
-    return quota.remaining ? `Cần ${need} lượt nhưng hôm nay chỉ còn ${quota.remaining}. Bỏ bớt món nhé.` : 'Hôm nay bạn đã dùng hết lượt tạo hình. Lượt mới có vào ngày mai.';
-  return null;
-}
 
 export type HeldKey = { key: string; payload: string };
 

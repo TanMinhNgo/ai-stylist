@@ -127,18 +127,17 @@ const garment = (n, slot, extra = {}) => ({
   ...extra,
 });
 
-test('"Thử ngay" replaces picks, clears the preset, keeps the body and sets the suggested occasion', () => {
+test('"Thử ngay" replaces picks, keeps the body and sets the suggested occasion', () => {
   const picked = suggestionPicks([garment(1, 'top'), garment(2, 'bottom')]);
   assert.deepEqual(Object.keys(picked.picks).sort(), ['bottom', 'top']);
   assert.ok(Object.values(picked.picks).every((w) => w.garmentId && w.tryOnAllowed));
 
   useStudio.getState().reset();
   useStudio.getState().setBody('m');
-  useStudio.getState().wearOutfit({ id: 'formal', label: 'F', bodyKey: 'm', image: 1, preset: { id: 'formal', sprite: {}, size: 1 }, members: [{ id: 'demo:x', label: 'x', tags: garment(9, 'top').tags, garmentId: null, tryOnAllowed: false, sprite: null, preset: 'formal' }] });
+  useStudio.getState().wearOutfit({ id: 'formal', label: 'F', bodyKey: 'm', members: [{ id: 'demo:x', label: 'x', tags: garment(9, 'top').tags, garmentId: null, tryOnAllowed: false }] });
   useStudio.getState().applySuggestion(picked.picks, 'Tiệc cưới');
   const s = useStudio.getState();
   assert.equal(s.body, 'm');
-  assert.equal(s.preset, null);
   assert.equal(s.occasion, 'Tiệc cưới');
   assert.deepEqual(Object.values(s.picks).map((w) => w.garmentId).sort(), [uuid(1), uuid(2)]);
   useStudio.getState().reset();

@@ -1,30 +1,23 @@
 import type { BodyKey } from '@stylist/shared';
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
-import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, PanResponder, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import * as THREE from 'three';
 
-import meta from '@/assets/mannequin/mannequin.json';
 import { Glass, Icon, Text } from '@/components/ui';
-import { contactShadow, dress } from '@/features/studio/dress';
-import { spriteRect, stagePlan, studioCamera, type Picks, type Preset } from '@/features/studio/outfit';
+import { contactShadow, dress, toon } from '@/features/studio/dress';
+import { looksOf, studioCamera, type Picks } from '@/features/studio/outfit';
 import { loadBody } from '@/features/studio/scene';
 import { colors } from '@/theme';
 
-type Stage = { renderer: THREE.WebGLRenderer; fig: THREE.Group; skin: THREE.MeshPhysicalMaterial; raf: number };
-type Props = { body: BodyKey; picks: Picks; preset: Preset | null; skin: string; onSpriteError?: () => void; style?: StyleProp<ViewStyle> };
+type Stage = { renderer: THREE.WebGLRenderer; fig: THREE.Group; skin: THREE.MeshToonMaterial; raf: number };
+type Props = { body: BodyKey; picks: Picks; skin: string; style?: StyleProp<ViewStyle> };
 
-/**
- * Front view: bare mannequin + front PNGs laid over it (pieces without a PNG for this body stay 3D proxies).
- * Dragging switches to orbit: every piece becomes a simulated 3D proxy and the PNGs hide, since a flat image cannot turn.
- */
-export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }: Props) {
+/** Anime-style (cel-shaded, ink-outlined) mannequin wearing 3D pieces built from each garment's tags. Drag to turn. */
+export function Mannequin3D({ body, picks, skin, style }: Props) {
   const stage = useRef<Stage | null>(null);
-  const spin = useRef({ y: 0, target: 0, dragFrom: 0, lastTouch: 0, front: true, settled: false });
+  const spin = useRef({ y: 0, target: 0, dragFrom: 0, lastTouch: 0, front: true });
   const [view, setView] = useState<'front' | 'orbit'>('front');
-  const [settled, setSettled] = useState(false);
-  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -46,9 +39,7 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
     setAttempt((a) => a + 1);
   };
 
-  // Proxies stay on until the turn back to front has finished, so the body never flashes bare.
-  const front = view === 'front' && settled;
-  const plan = useMemo(() => stagePlan(picks, preset, body, front ? 'front' : 'orbit'), [picks, preset, body, front]);
+  const looks = useMemo(() => looksOf(picks), [picks]);
 
   const pan = useRef(
     PanResponder.create({
@@ -56,8 +47,6 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
       onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 4 && Math.abs(g.dx) > Math.abs(g.dy),
       onPanResponderGrant: () => {
         spin.current.front = false;
-        spin.current.settled = false;
-        setSettled(false);
         setView('orbit');
         spin.current.dragFrom = spin.current.target;
         spin.current.lastTouch = Infinity;
@@ -80,7 +69,6 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
     s.y = Math.atan2(Math.sin(s.y), Math.cos(s.y));
     s.target = 0;
     s.front = true;
-    s.settled = false;
     setView('front');
   }
 
@@ -95,38 +83,27 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
       renderer.setPixelRatio(1);
       renderer.setSize(w, h, false);
       renderer.setClearColor(0x000000, 0);
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      // Cel colours stay flat: no filmic tone mapping.
+      renderer.toneMapping = THREE.NoToneMapping;
 
       const scene = new THREE.Scene();
       const camera = studioCamera(w / h);
-      // The design lights with a PMREM room (bright ceiling, warm right panel, cool left back panel). PMREM needs float
-      // render targets this GPU lacks (no EXT_color_buffer_float), so each panel becomes a light in the same place.
-      scene.add(new THREE.HemisphereLight(0xfffaf4, 0x77736e, 1.0));
-      const key = new THREE.DirectionalLight(0xfff6ec, 1.5);
-      key.position.set(2.2, 4, 3);
+      // Toon bands come from one key light; the soft fill keeps the shadow band from going muddy.
+      scene.add(new THREE.HemisphereLight(0xffffff, 0xb8b2c0, 1.1));
+      const key = new THREE.DirectionalLight(0xffffff, 1.6);
+      key.position.set(2, 3.5, 4);
       scene.add(key);
-      const warm = new THREE.DirectionalLight(0xffe2c4, 0.55);
-      warm.position.set(4.5, 1.2, 2.5);
-      scene.add(warm);
-      const cool = new THREE.DirectionalLight(0xc4d2ff, 0.45);
-      cool.position.set(-4.5, 1.5, -2.5);
-      scene.add(cool);
       scene.add(contactShadow());
 
       const fig = new THREE.Group();
       scene.add(fig);
-      const skinMat = new THREE.MeshPhysicalMaterial({ color: skin, roughness: 0.45, clearcoat: 0.15, clearcoatRoughness: 0.5, sheen: 0.3, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffe2d0') });
+      const skinMat = toon(skin);
       stage.current = { renderer, fig, skin: skinMat, raf: 0 };
 
       const loop = () => {
         const s = spin.current;
         if (!s.front && Date.now() - s.lastTouch > 2500) s.target += 0.004;
         s.y += (s.target - s.y) * 0.12;
-        if (s.front && !s.settled && Math.abs(s.y) < 0.003) {
-          s.y = 0;
-          s.settled = true;
-          setSettled(true);
-        }
         fig.rotation.y = s.y;
         renderer.render(scene, camera);
         gl.endFrameEXP();
@@ -145,14 +122,14 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
     loadBody(body)
       .then((m) => {
         if (!alive || !stage.current) return;
-        dress(stage.current.fig, m, plan.looks, stage.current.skin, plan.hidden);
+        dress(stage.current.fig, m, looks, stage.current.skin);
         setLoaded(true);
       })
       .catch((e) => alive && fail(e));
     return () => {
       alive = false;
     };
-  }, [ready, body, plan.looks, plan.hidden]);
+  }, [ready, body, looks]);
 
   useEffect(() => {
     stage.current?.skin.color.set(skin);
@@ -169,12 +146,8 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
     [],
   );
 
-  const showSprites = front && loaded && !!size;
-  const camera = useMemo(() => size && studioCamera(size.width / size.height), [size]);
-  const lm = meta[body].lm;
-
   return (
-    <View style={style} onLayout={(e) => setSize(e.nativeEvent.layout)} {...pan.panHandlers}>
+    <View style={style} {...pan.panHandlers}>
       {failed ? (
         <View style={styles.center}>
           <Text variant="callout" color={colors.inkSecondary}>Chưa hiển thị được người mẫu 3D</Text>
@@ -184,12 +157,7 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
         </View>
       ) : (
         <>
-          <GLView key={attempt} style={StyleSheet.absoluteFill} onContextCreate={onContextCreate} accessible accessibilityRole="image" accessibilityLabel={view === 'front' ? 'Người mẫu nhìn chính diện mặc đồ đang chọn' : 'Người mẫu 3D mô phỏng, kéo ngang để xoay'} />
-          {showSprites
-            ? plan.sprites.map((layer) => (
-                <Image key={layer.key} source={layer.sprite.source} style={[styles.sprite, spriteRect(layer, lm, size!, camera!)]} contentFit="contain" pointerEvents="none" onError={onSpriteError} />
-              ))
-            : null}
+          <GLView key={attempt} style={StyleSheet.absoluteFill} onContextCreate={onContextCreate} accessible accessibilityRole="image" accessibilityLabel="Người mẫu anime 3D mặc đồ đang chọn, kéo ngang để xoay" />
           {!loaded ? (
             <View style={styles.center} pointerEvents="none">
               <ActivityIndicator color={colors.inkSecondary} />
@@ -204,9 +172,6 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
                 </Glass>
               </Pressable>
             ) : null}
-            <Glass style={styles.badge}>
-              <Text variant="caption" color="#3A3A40">{view === 'front' ? (plan.sprites.length ? 'Chính diện · hình PNG' : 'Chính diện') : '3D mô phỏng · không phải ảnh thật'}</Text>
-            </Glass>
           </View>
         </>
       )}
@@ -216,7 +181,6 @@ export function Mannequin3D({ body, picks, preset, skin, onSpriteError, style }:
 
 const styles = StyleSheet.create({
   center: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  sprite: { position: 'absolute' },
   badgeRow: { position: 'absolute', top: 6, right: 16, alignItems: 'flex-end', gap: 6 },
   badge: { height: 30, paddingHorizontal: 12, borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 6 },
 });
