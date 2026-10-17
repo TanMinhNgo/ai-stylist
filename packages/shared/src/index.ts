@@ -10,3 +10,4 @@ export * from './subscription';
 export * from './stylist-usage';
 export * from './collections';
 export * from './wardrobe-planning';
+export * from './phase7';

@@ -8,5 +8,6 @@ import { InsightsRepository } from './insights.repository';
   imports: [DatabaseModule],
   controllers: [PlanningController],
   providers: [PlanningService, PlanningRepository, InsightsRepository],
+  exports: [PlanningRepository],
 })
 export class PlanningModule {}

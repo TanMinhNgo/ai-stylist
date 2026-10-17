@@ -1,8 +1,30 @@
 import { Global, Injectable, Module } from '@nestjs/common';
 import { z } from 'zod';
-import { PLAN_TRY_ON_LIMITS } from '@stylist/shared';
+import { AffiliateCatalog, PLAN_TRY_ON_LIMITS } from '@stylist/shared';
 
 const schema = z.object({
+  BILLING_PROVIDER: z.enum(['clerk', 'revenuecat']).default('clerk'),
+  REVENUECAT_API_KEY: z.string().min(1).optional(),
+  REVENUECAT_WEBHOOK_SECRET: z.string().min(32).optional(),
+  REVENUECAT_PLUS_ENTITLEMENT: z.string().min(1).default('plus'),
+  REVENUECAT_PRO_ENTITLEMENT: z.string().min(1).default('pro'),
+  REVENUECAT_ALLOW_SANDBOX: z.enum(['true', 'false']).default('false'),
+  WEATHER_ENABLED: z.enum(['true', 'false']).default('false'),
+  OPEN_METEO_API_KEY: z.string().min(1).optional(),
+  AFFILIATE_PRODUCTS_JSON: z
+    .string()
+    .default('[]')
+    .transform((value, ctx) => {
+      try {
+        return AffiliateCatalog.parse(JSON.parse(value));
+      } catch {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Invalid curated affiliate catalog',
+        });
+        return z.NEVER;
+      }
+    }),
   CLERK_BILLING_ENABLED: z.enum(['true', 'false']).default('false'),
   CLERK_PLUS_PLAN_SLUG: z.string().min(1).default('plus'),
   CLERK_PRO_PLAN_SLUG: z.string().min(1).default('pro'),
@@ -97,6 +119,30 @@ export class RuntimeConfig {
         'Invalid API configuration: CLERK_PLUS_PLAN_SLUG, CLERK_PRO_PLAN_SLUG',
       );
     this.values = result.data;
+    if (
+      this.values.REVENUECAT_PLUS_ENTITLEMENT ===
+      this.values.REVENUECAT_PRO_ENTITLEMENT
+    )
+      throw new Error('RevenueCat entitlement IDs must differ');
+    if (
+      this.values.BILLING_PROVIDER === 'revenuecat' &&
+      (!this.values.REVENUECAT_API_KEY ||
+        !this.values.REVENUECAT_WEBHOOK_SECRET)
+    )
+      throw new Error('RevenueCat requires API key and webhook signing secret');
+    if (
+      process.env.NODE_ENV === 'production' &&
+      this.values.REVENUECAT_ALLOW_SANDBOX === 'true'
+    )
+      throw new Error(
+        'RevenueCat sandbox entitlements are disabled in production',
+      );
+    if (
+      process.env.NODE_ENV === 'production' &&
+      this.values.WEATHER_ENABLED === 'true' &&
+      !this.values.OPEN_METEO_API_KEY
+    )
+      throw new Error('Commercial weather requires OPEN_METEO_API_KEY');
     if (
       process.env.NODE_ENV === 'production' &&
       (this.values.TRYON_PROVIDER === 'fake' ||

@@ -1,6 +1,8 @@
 # API AI Stylist
 
-Backend NestJS cho BE-01/BE-02/BE-03. Node 24 và npm 11; chạy lệnh cài đặt từ gốc repo để link `@stylist/shared`.
+Backend NestJS cho BE-01–BE-07. Node 24 và npm 11; chạy lệnh cài đặt từ gốc repo để link `@stylist/shared`.
+
+Phase 7 bổ sung backend RevenueCat, thời tiết/lịch, affiliate và chia sẻ lookbook. Xem [phạm vi/cấu hình](../../packages/docs/roadmap/phase-07-integrations.md) và [contract 14 route](../../packages/docs/CONTRACT_CHANGES.md). Trước dùng chạy migration `202610170008_phase7` bằng `npm run db:migrate --workspace=api` từ root; không reset DB. Các biến mới trong `.env.example` mặc định giữ Clerk, tắt weather và catalog affiliate rỗng. Không bật thanh toán bằng việc build API; native SDK/store products và public viewer cần phía mobile tích hợp riêng.
 
 ## Chạy local
 

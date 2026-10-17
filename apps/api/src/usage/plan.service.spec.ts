@@ -74,3 +74,38 @@ it('disabling Billing cannot reuse cached Pro rights or call the subscription pr
   expect(client.get).not.toHaveBeenCalled();
   expect(source.get).not.toHaveBeenCalled();
 });
+
+it('RevenueCat lookup works independently of disabled Clerk Billing and isolates cached rights', async () => {
+  const source = {
+    get: jest
+      .fn()
+      .mockResolvedValue({ plan: 'pro', validUntil: Date.now() + 60000 }),
+  };
+  const client = {
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue('OK'),
+  };
+  const service = new PlanService(
+    source,
+    { client } as unknown as RedisService,
+    {
+      user: {
+        findFirst: jest.fn().mockResolvedValue({ clerkUserId: 'user_fixture' }),
+      },
+    } as unknown as PrismaService,
+    {
+      values: {
+        BILLING_PROVIDER: 'revenuecat',
+        CLERK_BILLING_ENABLED: 'false',
+      },
+    } as RuntimeConfig,
+  );
+  expect(await service.getUserPlan('fixture')).toBe('pro');
+  expect(source.get).toHaveBeenCalledWith('user_fixture');
+  expect(client.set).toHaveBeenCalledWith(
+    'stylist:plan:fixture:revenuecat:0',
+    expect.any(String),
+    'PX',
+    expect.any(Number),
+  );
+});

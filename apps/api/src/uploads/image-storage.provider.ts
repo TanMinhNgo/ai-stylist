@@ -19,7 +19,12 @@ export abstract class ImageStorageProvider {
     urlEndpoint: string;
   };
   abstract get(fileId: string): Promise<StoredImage>;
-  abstract url(filePath: string, width: number, format?: 'jpg' | 'png'): string;
+  abstract url(
+    filePath: string,
+    width: number,
+    format?: 'jpg' | 'png',
+    expiresIn?: number,
+  ): string;
   abstract delete(fileId: string): Promise<void>;
   abstract listUserFiles(userId: string): Promise<string[]>;
   abstract saveResult(

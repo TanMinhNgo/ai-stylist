@@ -12,6 +12,9 @@ import { TryOnModule } from './try-on/try-on.module';
 import { UsageModule } from './usage/usage.module';
 import { CollectionsModule } from './collections/collections.module';
 import { PlanningModule } from './planning/planning.module';
+import { ContextModule } from './context/context.module';
+import { AffiliateModule } from './affiliate/affiliate.module';
+import { SharingModule } from './sharing/sharing.module';
 
 @Module({
   imports: [
@@ -23,6 +26,9 @@ import { PlanningModule } from './planning/planning.module';
     TryOnModule,
     CollectionsModule,
     PlanningModule,
+    ContextModule,
+    AffiliateModule,
+    SharingModule,
   ],
   controllers: [AppController],
   providers: [

@@ -8,13 +8,29 @@ import { RateLimitGuard } from './rate-limit.guard';
 import { UsageController } from './usage.controller';
 import { WorkService } from './work.service';
 import { AiMeter } from './ai-meter.service';
+import { RevenueCatPlanSource } from './revenuecat-plan.source';
+import { RuntimeConfig } from '../config/runtime-config';
+import { BillingController } from './billing.controller';
+import { BillingService } from './billing.service';
 @Global()
 @Module({
   imports: [DatabaseModule, QueueModule],
-  controllers: [UsageController],
+  controllers: [UsageController, BillingController],
   providers: [
+    BillingService,
     PlanService,
-    { provide: PlanSource, useClass: ClerkPlanSource },
+    ClerkPlanSource,
+    RevenueCatPlanSource,
+    {
+      provide: PlanSource,
+      inject: [RuntimeConfig, ClerkPlanSource, RevenueCatPlanSource],
+      useFactory: (
+        config: RuntimeConfig,
+        clerk: ClerkPlanSource,
+        revenuecat: RevenueCatPlanSource,
+      ) =>
+        config.values.BILLING_PROVIDER === 'revenuecat' ? revenuecat : clerk,
+    },
     UsageService,
     JobLimitsService,
     RateLimitGuard,
@@ -22,6 +38,7 @@ import { AiMeter } from './ai-meter.service';
     AiMeter,
   ],
   exports: [
+    RevenueCatPlanSource,
     PlanService,
     UsageService,
     JobLimitsService,

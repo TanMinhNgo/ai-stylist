@@ -24,6 +24,28 @@ describe('RuntimeConfig', () => {
     }
   });
 
+  it('keeps integrations opt-in and rejects conflicting entitlements, production sandbox and unlicensed weather', () => {
+    expect(new RuntimeConfig().values).toMatchObject({
+      BILLING_PROVIDER: 'clerk',
+      WEATHER_ENABLED: 'false',
+      AFFILIATE_PRODUCTS_JSON: [],
+    });
+    process.env.BILLING_PROVIDER = 'revenuecat';
+    expect(() => new RuntimeConfig()).toThrow('requires API key');
+    process.env.REVENUECAT_API_KEY = 'fixture';
+    process.env.REVENUECAT_WEBHOOK_SECRET = 'x'.repeat(32);
+    expect(new RuntimeConfig().values.BILLING_PROVIDER).toBe('revenuecat');
+    process.env.REVENUECAT_PLUS_ENTITLEMENT = 'pro';
+    expect(() => new RuntimeConfig()).toThrow('must differ');
+    delete process.env.REVENUECAT_PLUS_ENTITLEMENT;
+    process.env.NODE_ENV = 'production';
+    process.env.REVENUECAT_ALLOW_SANDBOX = 'true';
+    expect(() => new RuntimeConfig()).toThrow('sandbox');
+    process.env.REVENUECAT_ALLOW_SANDBOX = 'false';
+    process.env.WEATHER_ENABLED = 'true';
+    expect(() => new RuntimeConfig()).toThrow('Commercial weather');
+  });
+
   it('reads the browser allowlist without changing LAN settings', () => {
     process.env.CLERK_AUTHORIZED_PARTIES =
       'https://app.example.com, http://localhost:8081';

@@ -82,12 +82,17 @@ export class PlanService {
       where: { id: userId, deletedAt: null },
     });
     if (!user) throw new NotFoundException();
-    if (this.config.values.CLERK_BILLING_ENABLED === 'false') return 'free';
+    const provider = this.config.values.BILLING_PROVIDER ?? 'clerk';
+    if (
+      provider === 'clerk' &&
+      this.config.values.CLERK_BILLING_ENABLED === 'false'
+    )
+      return 'free';
     const revision =
       (await redisCommand(
         this.redis.client.get(this.version(user.clerkUserId)),
       )) ?? '0';
-    const key = `stylist:plan:${userId}:${revision}`;
+    const key = `stylist:plan:${userId}:${provider}:${revision}`;
     const value = await redisCommand(this.redis.client.get(key));
     let found: z.infer<typeof cached> | undefined;
     try {

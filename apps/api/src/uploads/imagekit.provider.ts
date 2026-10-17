@@ -41,7 +41,14 @@ export class ImageKitProvider extends ImageStorageProvider {
     };
   }
 
-  url(filePath: string, width: number, format: 'jpg' | 'png' = 'jpg') {
+  url(
+    filePath: string,
+    width: number,
+    format: 'jpg' | 'png' = 'jpg',
+    expiresIn = 900,
+  ) {
+    if (!Number.isInteger(expiresIn) || expiresIn < 1 || expiresIn > 900)
+      throw new Error('Invalid signed image expiry');
     const urlEndpoint = this.config.values.IMAGEKIT_URL_ENDPOINT;
     if (!urlEndpoint) throw new ServiceUnavailableException();
     return this.client.helper.buildSrc({
@@ -49,7 +56,7 @@ export class ImageKitProvider extends ImageStorageProvider {
       src: filePath,
       transformation: [{ width, format }],
       signed: true,
-      expiresIn: 900,
+      expiresIn,
     });
   }
 

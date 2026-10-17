@@ -58,3 +58,32 @@ it('rejects an invalid user folder before sending an inventory request', async (
   );
   expect(list).not.toHaveBeenCalled();
 });
+
+it('keeps legacy image expiry and bounds short-lived share URLs', () => {
+  const buildSrc = jest.fn().mockReturnValue('https://images.example/signed');
+  jest
+    .mocked(ImageKit)
+    .mockImplementation(
+      () => ({ helper: { buildSrc } }) as unknown as ImageKit,
+    );
+  const provider = new ImageKitProvider({
+    values: {
+      IMAGEKIT_PRIVATE_KEY: 'fixture',
+      IMAGEKIT_URL_ENDPOINT: 'https://images.example',
+    },
+  } as RuntimeConfig);
+  provider.url('/private/file', 400);
+  expect(buildSrc).toHaveBeenLastCalledWith(
+    expect.objectContaining({ expiresIn: 900 }),
+  );
+  provider.url('/private/file', 400, 'jpg', 30);
+  expect(buildSrc).toHaveBeenLastCalledWith(
+    expect.objectContaining({ expiresIn: 30 }),
+  );
+  expect(() => provider.url('/private/file', 400, 'jpg', 901)).toThrow(
+    'Invalid signed image expiry',
+  );
+  expect(() => provider.url('/private/file', 400, 'jpg', 0)).toThrow(
+    'Invalid signed image expiry',
+  );
+});
