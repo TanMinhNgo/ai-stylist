@@ -2,6 +2,7 @@ import { useAuth } from '@clerk/expo';
 import { useState } from 'react';
 import { TextInput } from 'react-native';
 import { Button, Screen, Text } from '@/components/ui';
+import { CancelBeforeDelete } from '@/features/integrations/components';
 import { getDeletion, requestDeletion } from '@/features/usage/hooks';
 import { DELETION_STATUS, deletionConfirmed, deleteThenSignOut } from '@/features/usage/logic';
 import { messageFor } from '@/lib/errors';
@@ -26,6 +27,7 @@ export default function DeleteAccountScreen() {
   return (
     <Screen title="Xóa tài khoản">
       <Text variant="title">Bạn muốn xóa tài khoản?</Text>
+      <CancelBeforeDelete />
       <Text variant="body">Tài khoản sẽ bị khóa ngay khi máy chủ nhận yêu cầu. Ảnh, tủ đồ, Lookbook, hồ sơ và tài khoản Clerk được xóa bằng tác vụ nền. Các món không thể khôi phục.</Text>
       <Text variant="body">Quá trình dọn dữ liệu có thể mất 12–20 phút hoặc lâu hơn khi nhà cung cấp gặp sự cố. Biên nhận không có nghĩa toàn bộ dữ liệu đã xóa xong. Máy chủ tiếp tục xử lý sau khi bạn đăng xuất.</Text>
       {accepted ? <><Text variant="body">Đã nhận yêu cầu xóa{status ? ` (${DELETION_STATUS[status]})` : ''}.</Text><Button label="Đăng xuất" onPress={() => signOut().catch(() => setProblem('Chưa đăng xuất được. Hãy thử lại.'))} /></> : step === 1 ? (

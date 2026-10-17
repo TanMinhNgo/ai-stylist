@@ -1,8 +1,10 @@
 import type { StylistAdvice } from '@stylist/shared';
+import { router } from 'expo-router';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Animated, PanResponder, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Button, Icon, Text } from '@/components/ui';
+import { shopQuery } from '@/features/integrations/logic';
 import { colorHex } from '@/features/studio/looks';
 import { useHeldKey, useRequestAdvice, useStylistJob, type OutfitItem } from '@/features/stylist/hooks';
 import { adviceWorking, jobUnsettled } from '@/features/stylist/logic';
@@ -115,6 +117,9 @@ export function AdviceBody({ advice, mock }: { advice: StylistAdvice; mock: bool
                 <Text variant="callout">{a.description}</Text>
                 <Text variant="caption" color={colors.inkSecondary}>{a.color}</Text>
                 <Text variant="footnote" color={colors.inkSecondary}>{a.reason}</Text>
+                <Pressable onPress={() => router.push({ pathname: '/shop', params: shopQuery(a.type) })} accessibilityRole="button" accessibilityLabel={`Tìm mua ${a.type}`} hitSlop={6}>
+                  <Text variant="footnote" color={colors.accent} style={{ fontWeight: '600' }}>Tìm mua</Text>
+                </Pressable>
               </View>
             ))}
           </ScrollView>

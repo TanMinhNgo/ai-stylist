@@ -79,6 +79,7 @@ export default function CollectionScreen() {
         <Text variant="callout" color={colors.inkSecondary}>Chưa có outfit nào trong bộ sưu tập này.</Text>
       )}
 
+      <Button label="Chia sẻ lookbook" variant="plain" onPress={() => router.push({ pathname: '/share/[id]', params: { id: c.id } })} icon={<Icon ios="square.and.arrow.up" android="share" size={18} />} />
       <Button label="Xóa bộ sưu tập" variant="danger" onPress={confirmDelete} loading={remove.isPending} icon={<Icon ios="trash" android="delete" size={18} color={colors.danger} />} />
       <Button label="Quay lại" variant="plain" onPress={() => router.back()} />
     </Screen>

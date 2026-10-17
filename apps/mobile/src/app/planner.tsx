@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button, Card, ErrorState, Icon, LoadingState, Screen, Text } from '@/components/ui';
+import { usePlannerContext } from '@/features/integrations/hooks';
+import { weatherLine } from '@/features/integrations/logic';
+import { DayExtras, WeekTools, type DayContext } from '@/features/integrations/PlannerExtras';
 import { OutfitPicker, OutfitThumb } from '@/features/planning/components';
 import { useDeletePlannerDay, usePlannerWeek, usePutPlannerDay } from '@/features/planning/hooks';
 import { addDays, dayLabel, deviceTimeZone, featureOn, localDate, plannerWritable } from '@/features/planning/logic';
@@ -23,6 +26,9 @@ export default function PlannerScreen() {
   const planner = usePlannerWeek(startDate, timeZone);
   const canEdit = featureOn(useEntitlements().data, 'weekly_outfit_planner');
   const [open, setOpen] = useState<string | null>(null);
+  // Rounded coordinates live only in memory for this screen; the API does not store them either.
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const context = usePlannerContext(startDate, timeZone, coords);
 
   return (
     <Screen title="Kế hoạch tuần" subtitle={`${dayLabel(startDate)} – ${dayLabel(addDays(startDate, 6))} · ${timeZone}`}>
@@ -31,13 +37,14 @@ export default function PlannerScreen() {
         <Button label="Tuần trước" variant="plain" onPress={() => setWeek(week - 1)} style={{ flex: 1 }} />
         <Button label="Tuần sau" variant="plain" onPress={() => setWeek(week + 1)} style={{ flex: 1 }} />
       </View>
+      <WeekTools context={context.data} coords={coords} onCoords={setCoords} startDate={startDate} timeZone={timeZone} />
       {planner.isPending ? (
         <LoadingState label="Đang tải kế hoạch…" />
       ) : planner.isError ? (
         <ErrorState error={planner.error} onRetry={() => planner.refetch()} />
       ) : (
         planner.data.days.map((d) => (
-          <DayCard key={d.date} day={d} today={today} canEdit={canEdit} open={open === d.date} onToggle={() => setOpen(open === d.date ? null : d.date)} />
+          <DayCard key={d.date} day={d} ctx={context.data?.days.find((c) => c.date === d.date)} today={today} canEdit={canEdit} open={open === d.date} onToggle={() => setOpen(open === d.date ? null : d.date)} />
         ))
       )}
       <Button label="Quay lại" variant="plain" onPress={() => router.back()} />
@@ -45,7 +52,7 @@ export default function PlannerScreen() {
   );
 }
 
-function DayCard({ day, today, canEdit, open, onToggle }: { day: Day; today: string; canEdit: boolean; open: boolean; onToggle: () => void }) {
+function DayCard({ day, ctx, today, canEdit, open, onToggle }: { day: Day; ctx: DayContext | undefined; today: string; canEdit: boolean; open: boolean; onToggle: () => void }) {
   const writable = canEdit && plannerWritable(day.date, today);
   return (
     <Card>
@@ -53,19 +60,24 @@ function DayCard({ day, today, canEdit, open, onToggle }: { day: Day; today: str
         <View style={{ flex: 1, gap: 2 }}>
           <Text variant="headline" color={day.date === today ? colors.accent : colors.ink}>{dayLabel(day.date)}{day.date === today ? ' · Hôm nay' : ''}</Text>
           <Text variant="callout" color={day.isPlanned ? colors.ink : colors.inkTertiary} numberOfLines={1}>{day.occasion ?? 'Chưa lên kế hoạch'}</Text>
+          {ctx?.weather || ctx?.events.length ? (
+            <Text variant="caption" color={colors.inkSecondary} numberOfLines={1}>{[ctx.weather && weatherLine(ctx.weather), ctx.events.length ? `${ctx.events.length} sự kiện` : null].filter(Boolean).join(' · ')}</Text>
+          ) : null}
           {day.outfitUnavailable ? <Text variant="caption" color={colors.warning}>Outfit đã chọn không còn dùng được (đã xóa hoặc thiếu món). Hãy chọn lại.</Text> : null}
         </View>
         {day.outfitId ? <OutfitThumb id={day.outfitId} size={56} /> : null}
         <Icon ios={open ? 'chevron.up' : 'chevron.down'} android={open ? 'expand_less' : 'expand_more'} size={14} color={colors.inkTertiary} />
       </Pressable>
-      {open ? writable ? <Editor day={day} onDone={onToggle} /> : <ReadOnly day={day} canEdit={canEdit} onDone={onToggle} /> : null}
+      {open ? <DayExtras day={ctx} timeZone={day.timeZone} /> : null}
+      {open ? writable ? <Editor day={day} suggested={ctx?.suggestedOccasion ?? null} onDone={onToggle} /> : <ReadOnly day={day} canEdit={canEdit} onDone={onToggle} /> : null}
     </Card>
   );
 }
 
-function Editor({ day, onDone }: { day: Day; onDone: () => void }) {
+function Editor({ day, suggested, onDone }: { day: Day; suggested: string | null; onDone: () => void }) {
   const put = usePutPlannerDay();
-  const [occasion, setOccasion] = useState(day.occasion ?? '');
+  // An empty day starts from its first calendar event's occasion; the user can change it.
+  const [occasion, setOccasion] = useState(day.occasion ?? suggested ?? '');
   const [outfitId, setOutfitId] = useState<string | null>(day.outfitId);
   const save = () =>
     put.mutate(

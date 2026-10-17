@@ -71,6 +71,9 @@ const QUOTA_BY_RESOURCE: Record<string, string> = {
   collections: 'Bạn đã có tối đa 50 bộ sưu tập. Xóa bớt một bộ để tạo bộ mới.',
   planner: 'Lịch đã đủ 730 ngày được lên kế hoạch. Xóa bớt ngày cũ để thêm ngày mới.',
   wear_history: 'Mỗi ngày chỉ ghi tối đa 5 lần đã mặc.',
+  calendar_events: 'Lịch đã có tối đa 730 sự kiện. Xóa bớt sự kiện cũ để thêm mới.',
+  affiliate_clicks: 'Hôm nay bạn đã mở nhiều liên kết mua sắm. Thử lại vào ngày mai.',
+  lookbook_shares: 'Bạn đang có tối đa 20 link chia sẻ còn hạn. Thu hồi bớt một link để tạo link mới.',
 };
 
 export function messageFor(error: unknown): string {

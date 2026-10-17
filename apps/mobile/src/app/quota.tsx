@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { Button, Card, ErrorState, LoadingState, Screen, Text } from '@/components/ui';
+import { StorePlans } from '@/features/integrations/components';
 import { UsageNotice } from '@/features/usage/UsageNotice';
 import { useEntitlements, useStylistUsage, useUsage } from '@/features/usage/hooks';
 import { PLAN_LABEL, planBenefits, resetLabel } from '@/features/usage/logic';
@@ -34,5 +35,5 @@ function StylistQuota() {
 
 export default function QuotaScreen() {
   const usage = useUsage();
-  return <Screen title="Hạn mức và gói"><Text variant="title">{usage.data?.remaining === 0 ? 'Bạn đã dùng hết lượt tháng này' : 'Lượt thử đồ của bạn'}</Text><Text variant="body">Khi hết lượt tháng này, bạn vẫn xem tủ đồ và Lookbook. Lượt mới được cấp đầu tháng theo giờ UTC; giờ hiển thị bên dưới theo điện thoại.</Text><UsageNotice /><StylistQuota /><PlanBenefits /><Button label="Quay lại" variant="plain" onPress={() => router.back()} /></Screen>;
+  return <Screen title="Hạn mức và gói"><Text variant="title">{usage.data?.remaining === 0 ? 'Bạn đã dùng hết lượt tháng này' : 'Lượt thử đồ của bạn'}</Text><Text variant="body">Khi hết lượt tháng này, bạn vẫn xem tủ đồ và Lookbook. Lượt mới được cấp đầu tháng theo giờ UTC; giờ hiển thị bên dưới theo điện thoại.</Text><UsageNotice /><StylistQuota /><PlanBenefits /><StorePlans /><Button label="Quay lại" variant="plain" onPress={() => router.back()} /></Screen>;
 }

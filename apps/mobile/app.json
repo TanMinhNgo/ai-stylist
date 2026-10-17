@@ -43,7 +43,19 @@
         }
       ],
       "expo-asset",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "AI Stylist dùng vị trí gần đúng khi bạn bấm xem thời tiết, để gợi ý lớp áo cho kế hoạch tuần. Vị trí không được lưu."
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "AI Stylist đọc lịch khi bạn chọn một sự kiện để thêm vào kế hoạch trang phục. Chỉ sự kiện bạn chọn được gửi đi."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

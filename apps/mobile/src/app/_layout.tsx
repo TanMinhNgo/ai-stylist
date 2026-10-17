@@ -7,6 +7,7 @@ import { useEffect, useRef } from 'react';
 import { AppState, View } from 'react-native';
 import { Connectivity } from '@/components/Connectivity';
 
+import { forgetStoreUser } from '@/features/integrations/store';
 import { useStudio } from '@/features/studio/store';
 import { useOnboardingHydrated, useOnboardingSkip, useStyleProfile } from '@/features/stylist/hooks';
 import { needsOnboarding } from '@/features/stylist/logic';
@@ -53,6 +54,7 @@ function RootStack() {
   useEffect(() => {
     queryClient.clear();
     useStudio.getState().reset();
+    void forgetStoreUser();
   }, [userId]);
 
   if (!isLoaded) return null;
@@ -76,9 +78,13 @@ function RootStack() {
           <Stack.Screen name="collection/[id]" />
           <Stack.Screen name="planner" />
           <Stack.Screen name="insights" />
+          <Stack.Screen name="shop" />
+          <Stack.Screen name="share/[id]" />
           <Stack.Screen name="delete-account" />
           <Stack.Screen name="legal" />
         </Stack.Protected>
+        {/* A shared lookbook link opens with or without an account. */}
+        <Stack.Screen name="shared/[token]" />
         <Stack.Protected guard={!isSignedIn}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
